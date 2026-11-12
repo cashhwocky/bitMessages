@@ -42,6 +42,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Done
@@ -105,6 +106,9 @@ fun ConversationListScreen(vm: AppViewModel) {
     val view = LocalView.current
     var menuFor by remember { mutableStateOf<Conversation?>(null) }
     var confirmDelete by remember { mutableStateOf<Conversation?>(null) }
+    val sel = remember { Selection<Long>() }
+    var confirmBulk by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = sel.active) { sel.exit() }
 
     val byId = remember(conversations) { conversations.associateBy { it.threadId } }
     val pinned = remember(pinOrder, conversations) { pinOrder.mapNotNull { byId[it] } }
@@ -130,14 +134,39 @@ fun ConversationListScreen(vm: AppViewModel) {
             Modifier.fillMaxSize().blur(blur),
             contentPadding = PaddingValues(bottom = 130.dp),
         ) {
-            item(key = "header") { Header(vm, unreadTotal, conversations.size) }
+            item(key = "header") {
+                if (sel.active) {
+                    SelectBar(
+                        count = sel.items.size,
+                        allSelected = conversations.isNotEmpty() && sel.items.size == conversations.size,
+                        onClose = { sel.exit() },
+                        onAll = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            if (sel.items.size == conversations.size) sel.setAll(emptyList()) else sel.setAll(conversations.map { it.threadId })
+                        },
+                        actions = listOf(
+                            SelectAction("Mark as read", Icons.Rounded.Done) {
+                                vm.markRead(sel.items.toList())
+                                sel.exit()
+                            },
+                            SelectAction("Delete", Icons.Rounded.Delete, Bit.Error) { confirmBulk = true },
+                        ),
+                    )
+                } else {
+                    Header(vm, unreadTotal, conversations.size, onSelect = { sel.start() })
+                }
+            }
 
             if (query.isNotBlank()) {
                 searchResults(titleMatches, hits, query) { vm.setQuery(""); vm.openThread(it) }
             } else {
                 if (pinned.isNotEmpty()) {
                     item(key = "pins") {
-                        PinGrid(pinned, onOpen = { vm.openThread(it.threadId) }, onLong = openMenu)
+                        PinGrid(
+                            pinned, sel,
+                            onOpen = { if (sel.active) { view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK); sel.toggle(it.threadId) } else vm.openThread(it.threadId) },
+                            onLong = { if (sel.active) sel.toggle(it.threadId) else openMenu(it) },
+                        )
                     }
                 }
                 if (loaded && conversations.isEmpty()) {
@@ -153,8 +182,8 @@ fun ConversationListScreen(vm: AppViewModel) {
                     itemsIndexed(rest, key = { _, it -> it.threadId }) { index, c ->
                         val surface = rowSurface(listStyle, index == 0, index == rest.lastIndex)
                         SwipeRow(
-                            left = swipeLeft,
-                            right = swipeRight,
+                            left = if (sel.active) Prefs.Swipe.NONE else swipeLeft,
+                            right = if (sel.active) Prefs.Swipe.NONE else swipeRight,
                             modifier = Modifier.animateItem(placementSpec = Bit.placement),
                             onAction = { action ->
                                 when (action) {
@@ -168,7 +197,20 @@ fun ConversationListScreen(vm: AppViewModel) {
                             },
                         ) {
                             Box(surface) {
-                                ConversationRow(c, onClick = { vm.openThread(c.threadId) }, onLong = { openMenu(c) })
+                                ConversationRow(
+                                    c,
+                                    selectMode = sel.active,
+                                    selected = c.threadId in sel,
+                                    onClick = {
+                                        if (sel.active) {
+                                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                            sel.toggle(c.threadId)
+                                        } else {
+                                            vm.openThread(c.threadId)
+                                        }
+                                    },
+                                    onLong = { if (sel.active) sel.toggle(c.threadId) else openMenu(c) },
+                                )
                             }
                         }
                     }
@@ -243,9 +285,32 @@ fun ConversationListScreen(vm: AppViewModel) {
                     onRead = { vm.markRead(listOf(c.threadId)); menuFor = null },
                     onBlock = { vm.block(c.recipients.map { it.address }); menuFor = null },
                     onDelete = { confirmDelete = c; menuFor = null },
+                    onSelect = {
+                        view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                        sel.start(c.threadId)
+                        menuFor = null
+                    },
                 )
             }
         }
+    }
+
+    if (confirmBulk) {
+        val n = sel.items.size
+        AlertDialog(
+            onDismissRequest = { confirmBulk = false },
+            containerColor = Bit.SurfaceHigh,
+            title = { Text(if (n == 1) "Delete 1 chat?" else "Delete $n chats?", fontFamily = Display, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp) },
+            text = { Text("This removes the messages from this phone.", color = Bit.TextDim) },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.deleteThreads(sel.items.toList())
+                    confirmBulk = false
+                    sel.exit()
+                }) { Text("Delete", color = Bit.Error, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = { confirmBulk = false }) { Text("Cancel", color = Color.White) } },
+        )
     }
 
     confirmDelete?.let { c ->
@@ -265,7 +330,7 @@ fun ConversationListScreen(vm: AppViewModel) {
 }
 
 @Composable
-private fun Header(vm: AppViewModel, unread: Int, chats: Int) {
+private fun Header(vm: AppViewModel, unread: Int, chats: Int, onSelect: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().statusBarsPadding()) {
         Row(
@@ -281,6 +346,10 @@ private fun Header(vm: AppViewModel, unread: Int, chats: Int) {
                     contentAlignment = Alignment.Center,
                 ) { MenuGlyph() }
                 DropdownMenu(menu, { menu = false }, containerColor = Bit.SurfaceHigh) {
+                    DropdownMenuItem(text = { Text("Select chats") }, onClick = {
+                        menu = false
+                        onSelect()
+                    })
                     DropdownMenuItem(text = { Text("Mark all as read") }, onClick = {
                         menu = false
                         vm.markRead(vm.conversations.value.filter { it.unread }.map { it.threadId })
@@ -343,7 +412,7 @@ fun SectionRule(label: String) {
 // ------------------------------------------------------------------ pins
 
 @Composable
-private fun PinGrid(pins: List<Conversation>, onOpen: (Conversation) -> Unit, onLong: (Conversation) -> Unit) {
+private fun PinGrid(pins: List<Conversation>, sel: Selection<Long>, onOpen: (Conversation) -> Unit, onLong: (Conversation) -> Unit) {
     Column(
         Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 30.dp),
         verticalArrangement = Arrangement.spacedBy(28.dp),
@@ -351,7 +420,7 @@ private fun PinGrid(pins: List<Conversation>, onOpen: (Conversation) -> Unit, on
         pins.chunked(3).forEach { row ->
             Row(Modifier.fillMaxWidth()) {
                 row.forEach { c ->
-                    Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) { Pin(c, onOpen, onLong) }
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) { Pin(c, sel.active, c.threadId in sel, onOpen, onLong) }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
@@ -361,7 +430,7 @@ private fun PinGrid(pins: List<Conversation>, onOpen: (Conversation) -> Unit, on
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Pin(c: Conversation, onOpen: (Conversation) -> Unit, onLong: (Conversation) -> Unit) {
+private fun Pin(c: Conversation, selectMode: Boolean, selected: Boolean, onOpen: (Conversation) -> Unit, onLong: (Conversation) -> Unit) {
     val pop = remember(c.threadId) { Animatable(0.6f) }
     LaunchedEffect(c.threadId) { pop.animateTo(1f, Bit.bouncy) }
     val unread = c.unread
@@ -381,6 +450,7 @@ private fun Pin(c: Conversation, onOpen: (Conversation) -> Unit, onLong: (Conver
                         .background(if (unread) Bit.Accent else Bit.Raised),
                 )
                 Avatar(c.recipients, 94.dp, Modifier.border(3.dp, Bit.Black, CircleShape))
+                if (selectMode) SelectDot(selected, Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 4.dp))
                 if (unread) {
                     Box(
                         Modifier.align(Alignment.BottomEnd).offset(x = (-2).dp, y = (-4).dp)
@@ -475,15 +545,19 @@ private fun SwipeRow(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ConversationRow(c: Conversation, onClick: () -> Unit, onLong: () -> Unit) {
+private fun ConversationRow(c: Conversation, selectMode: Boolean, selected: Boolean, onClick: () -> Unit, onLong: () -> Unit) {
     val context = LocalContext.current
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+            .background(if (selected) Bit.Accent.copy(alpha = 0.16f) else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLong)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Avatar(c.recipients, 54.dp)
+        Box {
+            Avatar(c.recipients, 54.dp)
+            if (selectMode) SelectDot(selected, Modifier.align(Alignment.BottomEnd).offset(x = 4.dp, y = 4.dp))
+        }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -551,6 +625,7 @@ private fun HoldMenu(
     onRead: () -> Unit,
     onBlock: () -> Unit,
     onDelete: () -> Unit,
+    onSelect: () -> Unit,
 ) {
     val context = LocalContext.current
     val lift = remember { Animatable(0.85f) }
@@ -585,6 +660,7 @@ private fun HoldMenu(
                 onClick = onPin,
             )
             if (c.unread) MenuRow("Mark as read", { Icon(Icons.Rounded.Done, null, tint = it) }, onClick = onRead)
+            MenuRow("Select", { Icon(Icons.Rounded.CheckCircle, null, tint = it) }, onClick = onSelect)
             MenuRow("Block", { Icon(Icons.Rounded.Block, null, tint = it) }, onClick = onBlock)
             Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp).height(1.dp).background(Bit.Outline))
             MenuRow("Delete", { Icon(Icons.Rounded.Delete, null, tint = it) }, color = Bit.Error, onClick = onDelete)
@@ -612,6 +688,18 @@ private fun MenuRow(
         Spacer(Modifier.width(14.dp))
         Text(label, color = fg, fontSize = 16.sp, fontWeight = if (highlight) FontWeight.ExtraBold else FontWeight.SemiBold, modifier = Modifier.weight(1f))
         trailing?.let { Text(it, style = mono(11f, color = fg.copy(alpha = 0.75f), spacing = 0.6f)) }
+    }
+}
+
+/** Check mark shown on avatars in select mode: filled when selected, an empty ring when not. */
+@Composable
+fun SelectDot(selected: Boolean, modifier: Modifier = Modifier) {
+    Box(
+        modifier.size(24.dp).clip(CircleShape).background(Bit.Black).padding(2.dp).clip(CircleShape)
+            .then(if (selected) Modifier.background(Bit.Accent) else Modifier.border(2.dp, Color.White, CircleShape)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) Icon(Icons.Rounded.Done, null, tint = Bit.OnAccent, modifier = Modifier.size(14.dp))
     }
 }
 

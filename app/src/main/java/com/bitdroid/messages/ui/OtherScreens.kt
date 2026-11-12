@@ -382,7 +382,7 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
                 }
             }
             item { SectionLabel("About") }
-            item { SettingRow("bitMessages", "SMS and MMS for bitDroid · v0.3.1") {} }
+            item { SettingRow("bitMessages", "SMS and MMS for bitDroid · v0.4.0") {} }
         }
     }
 }

@@ -57,6 +57,8 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.MoreVert
@@ -166,6 +168,9 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
     var viewer by remember { mutableStateOf<Uri?>(null) }
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    val msgSel = remember(threadId) { Selection<String>() }
+    var confirmMsgDelete by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = msgSel.active) { msgSel.exit() }
 
     val draft = vm.drafts[threadId]
     var text by remember(threadId) { mutableStateOf(draft?.text ?: "") }
@@ -203,7 +208,24 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
 
     Column(Modifier.fillMaxSize().imePadding()) {
         // ----------------------------------------------------------- header
-        Row(
+        if (msgSel.active) SelectBar(
+            count = msgSel.items.size,
+            allSelected = state.messages.isNotEmpty() && msgSel.items.size == state.messages.size,
+            onClose = { msgSel.exit() },
+            onAll = {
+                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                if (msgSel.items.size == state.messages.size) msgSel.setAll(emptyList()) else msgSel.setAll(state.messages.map { it.key })
+            },
+            actions = listOf(
+                SelectAction("Copy", Icons.Rounded.ContentCopy) {
+                    val text = state.messages.filter { it.key in msgSel && it.body.isNotBlank() }.joinToString("\n") { it.body }
+                    context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("messages", text))
+                    Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+                    msgSel.exit()
+                },
+                SelectAction("Delete", Icons.Rounded.Delete, Bit.Error) { confirmMsgDelete = true },
+            ),
+        ) else Row(
             Modifier.fillMaxWidth().statusBarsPadding().padding(start = 6.dp, end = 12.dp, top = 6.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -273,6 +295,7 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
                                     context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("message", m.body))
                                 },
                                 onDelete = { vm.deleteMessage(it) },
+                                sel = msgSel,
                             )
                         }
                     }
@@ -316,6 +339,24 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
                 else CircularProgressIndicator(color = Bit.Accent)
             }
         }
+    }
+
+    if (confirmMsgDelete) {
+        val n = msgSel.items.size
+        AlertDialog(
+            onDismissRequest = { confirmMsgDelete = false },
+            containerColor = Bit.SurfaceHigh,
+            title = { Text(if (n == 1) "Delete 1 message?" else "Delete $n messages?", fontFamily = Display, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp) },
+            text = { Text("This removes them from this phone.", color = Bit.TextDim) },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.messages.filter { it.key in msgSel }.forEach { vm.deleteMessage(it) }
+                    confirmMsgDelete = false
+                    msgSel.exit()
+                }) { Text("Delete", color = Bit.Error, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = { confirmMsgDelete = false }) { Text("Cancel", color = Color.White) } },
+        )
     }
 
     if (confirmDelete) {
@@ -372,6 +413,7 @@ private fun RunBlock(
     onDownload: (Message) -> Unit,
     onCopy: (Message) -> Unit,
     onDelete: (Message) -> Unit,
+    sel: Selection<String>,
 ) {
     val context = LocalContext.current
     val mine = run.outgoing
@@ -413,7 +455,7 @@ private fun RunBlock(
         ) {
             run.messages.forEachIndexed { i, m ->
                 if (i > 0) Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.5.dp).background(divider))
-                Segment(m, fg, first = i == 0, onImage, onRetry, onDownload, onCopy, onDelete)
+                Segment(m, fg, first = i == 0, onImage, onRetry, onDownload, onCopy, onDelete, sel)
             }
             val last = run.last
             val status = when {
@@ -460,14 +502,23 @@ private fun Segment(
     onDownload: (Message) -> Unit,
     onCopy: (Message) -> Unit,
     onDelete: (Message) -> Unit,
+    sel: Selection<String>,
 ) {
     val view = LocalView.current
     var menu by remember { mutableStateOf(false) }
+    val picked = m.key in sel
     val press by animateFloatAsState(if (menu) 0.97f else 1f, Bit.bouncy, label = "press")
     Box(Modifier.fillMaxWidth()) {
         Column(
-            Modifier.fillMaxWidth().scale(press).combinedClickable(
+            Modifier.fillMaxWidth().scale(press)
+                .background(if (picked) fg.copy(alpha = 0.16f) else Color.Transparent)
+                .combinedClickable(
                 onClick = {
+                    if (sel.active) {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        sel.toggle(m.key)
+                        return@combinedClickable
+                    }
                     when (m.status) {
                         MessageStatus.FAILED -> onRetry(m)
                         MessageStatus.DOWNLOAD_FAILED, MessageStatus.PENDING_DOWNLOAD -> onDownload(m)
@@ -476,7 +527,7 @@ private fun Segment(
                 },
                 onLongClick = {
                     view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                    menu = true
+                    if (sel.active) sel.toggle(m.key) else menu = true
                 },
             ),
         ) {
@@ -539,6 +590,7 @@ private fun Segment(
             }
         }
         DropdownMenu(menu, { menu = false }, containerColor = Bit.SurfaceHigh) {
+            DropdownMenuItem(text = { Text("Select") }, onClick = { menu = false; sel.start(m.key) })
             if (m.status == MessageStatus.FAILED) DropdownMenuItem(text = { Text("Retry") }, onClick = { menu = false; onRetry(m) })
             if (m.body.isNotBlank()) DropdownMenuItem(text = { Text("Copy text") }, onClick = { menu = false; onCopy(m) })
             DropdownMenuItem(text = { Text("Delete", color = Bit.Error) }, onClick = { menu = false; onDelete(m) })

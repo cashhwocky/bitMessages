@@ -326,7 +326,10 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
                     vm.push(Screen.Blocked)
                 }
             }
+            item { SectionLabel("RCS · Beta") }
+            item { RcsSettingsSection(onTurnOff = onSetDefault) }
             item { SectionLabel("Look") }
+            item { IconPicker() }
             item {
                 ToggleRow("Monet background", "A faint glow in your wallpaper colors behind the black", monet) {
                     vm.setMonet(it)
@@ -381,7 +384,7 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
                 }
             }
             item { SectionLabel("About") }
-            item { SettingRow("bitMessages", "SMS and MMS for bitDroid · v0.2.1") {} }
+            item { SettingRow("bitMessages", "SMS, MMS and RCS (beta) for bitDroid · v0.3.0") {} }
         }
     }
 }

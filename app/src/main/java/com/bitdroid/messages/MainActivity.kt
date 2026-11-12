@@ -60,6 +60,8 @@ class MainActivity : ComponentActivity() {
     private val roleLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         vm.onResume()
         roleRefused.value = !vm.isDefault.value
+        // Back as the default texting app means RCS mode is off.
+        if (vm.isDefault.value) com.bitdroid.messages.data.Rcs.setEnabled(this, false)
         if (vm.isDefault.value) requestRuntimePermissions()
     }
 
@@ -77,7 +79,11 @@ class MainActivity : ComponentActivity() {
                 val monet by vm.monet.collectAsStateWithLifecycle()
                 Box(Modifier.fillMaxSize().background(Bit.Black).monetGlow(monet)) {
                     if (!isDefault) {
-                        SetupScreen(onSetDefault = ::requestRole, blocked = roleRefused.value)
+                        if (com.bitdroid.messages.data.Rcs.enabled(this@MainActivity)) {
+                            com.bitdroid.messages.ui.RcsModeScreen(onTurnOff = ::requestRole)
+                        } else {
+                            SetupScreen(onSetDefault = ::requestRole, blocked = roleRefused.value)
+                        }
                     } else {
                         // Predictive back: the screen shrinks and follows your thumb; let go to go back.
                         var backProgress by remember { mutableFloatStateOf(0f) }

@@ -3,4 +3,6 @@
     <color name="bit_black">#000000</color>
     <color name="bit_lilac">#EADDFF</color>
     <color name="bit_on_lilac">#21005D</color>
+    <color name="icon_white">#FFFFFF</color>
+    <color name="icon_blue">#A8C7FA</color>
 </resources>

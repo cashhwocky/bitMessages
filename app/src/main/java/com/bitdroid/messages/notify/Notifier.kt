@@ -37,7 +37,8 @@ object Notifier {
     private fun nm(context: Context) = context.getSystemService(NotificationManager::class.java)
 
     private fun canPost(context: Context) =
-        context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        android.os.Build.VERSION.SDK_INT < 33 ||
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
     fun setupBaseChannels(context: Context) {
         val nm = nm(context)

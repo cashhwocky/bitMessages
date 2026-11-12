@@ -19,7 +19,12 @@ object Sims {
                 .sortedBy { it.simSlotIndex }
                 .map { info ->
                     val number = try {
-                        sm.getPhoneNumber(info.subscriptionId).ifBlank { null }
+                        if (android.os.Build.VERSION.SDK_INT >= 33) {
+                            sm.getPhoneNumber(info.subscriptionId).ifBlank { null }
+                        } else {
+                            @Suppress("DEPRECATION")
+                            info.number?.ifBlank { null }
+                        }
                     } catch (_: Exception) {
                         null
                     }

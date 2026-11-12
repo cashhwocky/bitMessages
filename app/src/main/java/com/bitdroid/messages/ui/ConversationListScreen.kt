@@ -95,7 +95,7 @@ fun ConversationListScreen(vm: AppViewModel) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             // Header / selection bar
             Box(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp)) {
-                AnimatedVisibility(
+                androidx.compose.animation.AnimatedVisibility(
                     visible = selected.isEmpty(),
                     enter = fadeIn() + slideInVertically { -it / 2 },
                     exit = fadeOut() + slideOutVertically { -it / 2 },
@@ -128,7 +128,7 @@ fun ConversationListScreen(vm: AppViewModel) {
                         }
                     }
                 }
-                AnimatedVisibility(
+                androidx.compose.animation.AnimatedVisibility(
                     visible = selected.isNotEmpty(),
                     enter = fadeIn() + slideInVertically { it / 2 },
                     exit = fadeOut() + slideOutVertically { it / 2 },

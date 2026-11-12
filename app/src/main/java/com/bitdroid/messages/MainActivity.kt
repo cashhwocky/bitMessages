@@ -156,9 +156,9 @@ class MainActivity : ComponentActivity() {
                 val text = intent.getStringExtra("sms_body") ?: intent.getStringExtra(Intent.EXTRA_TEXT)
                 val images = ArrayList<Uri>()
                 if (intent.action == Intent.ACTION_SEND) {
-                    intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)?.let(images::add)
+                    androidx.core.content.IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.let(images::add)
                 } else {
-                    intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)?.let(images::addAll)
+                    androidx.core.content.IntentCompat.getParcelableArrayListExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.let(images::addAll)
                 }
                 val recipients = data?.takeIf { it.scheme in setOf("sms", "smsto", "mms", "mmsto") }
                     ?.let(Sender::parseRecipients).orEmpty()

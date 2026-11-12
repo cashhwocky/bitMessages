@@ -3,7 +3,9 @@
 //   PRODUCT_PACKAGES += bitMessages
 // to your product makefile. `overrides` removes AOSP Messaging so bitMessages
 // is the only SMS app on first boot. Also set config_defaultSms (see
-// overlay/config.xml) so the system picks it as the default SMS role holder.
+// overlay/config.xml) so the system picks it as the default SMS role holder,
+// and add permissions/default-permissions-bitmessages.xml so contacts,
+// phone and notification access are granted on first boot.
 
 android_app_import {
     name: "bitMessages",
@@ -14,4 +16,12 @@ android_app_import {
         enabled: true,
     },
     overrides: ["messaging", "Messaging"],
+    required: ["default-permissions-bitmessages.xml"],
+}
+
+prebuilt_etc {
+    name: "default-permissions-bitmessages.xml",
+    src: "permissions/default-permissions-bitmessages.xml",
+    sub_dir: "default-permissions",
+    product_specific: true,
 }

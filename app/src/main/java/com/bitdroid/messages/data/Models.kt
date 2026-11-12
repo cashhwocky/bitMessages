@@ -18,6 +18,8 @@ data class Conversation(
     val date: Long,
     val unread: Boolean,
     val hasError: Boolean,
+    val unreadCount: Int = 0,
+    val pinned: Boolean = false,
 ) {
     val isGroup: Boolean get() = recipients.size > 1
     val title: String

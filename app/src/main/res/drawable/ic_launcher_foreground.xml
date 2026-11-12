@@ -1,11 +1,11 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- Lilac chat bubble with a toggle "bit" inside -->
+    <!-- Chat bubble with bitDroid's toggle inside, zoomed out to sit inside the icon mask -->
     <path android:fillColor="#EADDFF"
-        android:pathData="M34,32h40a10,10 0,0 1,10 10v20a10,10 0,0 1,-10 10H50l-12,10v-10h-4a10,10 0,0 1,-10 -10V42a10,10 0,0 1,10 -10z" />
+        android:pathData="M42,37h24a9,9 0,0 1,9 9v12a9,9 0,0 1,-9 9H53l-9,8v-8h-2a9,9 0,0 1,-9 -9V46a9,9 0,0 1,9 -9z" />
     <path android:fillColor="#21005D"
-        android:pathData="M44,45h20a7,7 0,0 1,0 14H44a7,7 0,0 1,0 -14z" />
+        android:pathData="M48,47.5h12a4.5,4.5 0,0 1,0 9H48a4.5,4.5 0,0 1,0 -9z" />
     <path android:fillColor="#EADDFF"
-        android:pathData="M64,47.5a4.5,4.5 0,1 1,0 9a4.5,4.5 0,1 1,0 -9z" />
+        android:pathData="M60,49a3,3 0,1 1,0 6a3,3 0,1 1,0 -6z" />
 </vector>

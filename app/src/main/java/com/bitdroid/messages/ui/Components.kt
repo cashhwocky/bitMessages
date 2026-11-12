@@ -88,8 +88,8 @@ fun rememberImage(uri: Uri?, maxDim: Int): ImageBitmap? {
 // ----------------------------------------------------------------- avatars
 
 private val avatarColors = listOf(
-    Color(0xFF4F378B), Color(0xFF633B48), Color(0xFF31628D), Color(0xFF3B6939),
-    Color(0xFF7D5260), Color(0xFF5B5D72), Color(0xFF6E4A9E), Color(0xFF8C4A2F),
+    Color(0xFF5B3FA0), Color(0xFF7A3550), Color(0xFF2B5E8C), Color(0xFF2F6B3A),
+    Color(0xFF8A4F68), Color(0xFF9A4A26), Color(0xFF4E5070), Color(0xFF1F6A72),
 )
 
 @Composable
@@ -111,8 +111,9 @@ fun Avatar(contacts: List<Contact>, size: Dp, modifier: Modifier = Modifier) {
             single?.name != null -> Text(
                 single.name.trim().firstOrNull()?.uppercase() ?: "#",
                 color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = (size.value * 0.42f).sp,
+                fontFamily = Display,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = (size.value * 0.38f).sp,
             )
             else -> Icon(Icons.Rounded.Person, null, tint = Bit.TextDim, modifier = Modifier.size(size * 0.55f))
         }

@@ -80,6 +80,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _blocked = MutableStateFlow<kotlin.collections.List<String>>(emptyList())
     val blocked: StateFlow<kotlin.collections.List<String>> = _blocked
 
+    private val _pins = MutableStateFlow(Prefs.pins(app))
+    val pins: StateFlow<kotlin.collections.List<Long>> = _pins
+
+    private val _swipeLeft = MutableStateFlow(Prefs.swipeLeft(app))
+    val swipeLeft: StateFlow<Prefs.Swipe> = _swipeLeft
+    private val _swipeRight = MutableStateFlow(Prefs.swipeRight(app))
+    val swipeRight: StateFlow<Prefs.Swipe> = _swipeRight
+
+    private val _monet = MutableStateFlow(Prefs.monetBackground(app))
+    val monet: StateFlow<Boolean> = _monet
+
+    /** Returns false when all pin slots are full. */
+    fun togglePin(threadId: Long): Boolean {
+        val ok = if (threadId in _pins.value) {
+            Prefs.unpin(ctx, threadId)
+            true
+        } else {
+            Prefs.pin(ctx, threadId)
+        }
+        _pins.value = Prefs.pins(ctx)
+        _conversations.value = _conversations.value.map { it.copy(pinned = it.threadId in _pins.value) }
+        return ok
+    }
+
+    fun setSwipeLeft(s: Prefs.Swipe) { Prefs.setSwipeLeft(ctx, s); _swipeLeft.value = s }
+    fun setSwipeRight(s: Prefs.Swipe) { Prefs.setSwipeRight(ctx, s); _swipeRight.value = s }
+    fun setMonet(on: Boolean) { Prefs.setMonetBackground(ctx, on); _monet.value = on }
+
     /** Unsent text per thread, and a shared-in draft for the next opened thread. */
     val drafts = mutableStateMapOf<Long, Draft>()
     var pendingShare: Draft? = null
@@ -262,6 +290,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteThreads(ids: Collection<Long>) {
         val list = ids.toList()
         _conversations.value = _conversations.value.filterNot { it.threadId in list }
+        list.forEach { Prefs.unpin(ctx, it) }
+        _pins.value = Prefs.pins(ctx)
         appScope.launch {
             list.forEach {
                 Store.deleteThread(ctx, it)

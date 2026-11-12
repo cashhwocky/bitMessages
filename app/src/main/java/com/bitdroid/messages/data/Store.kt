@@ -35,8 +35,27 @@ object Store {
         return map
     }
 
+    /** Unread incoming messages per thread, SMS + MMS. */
+    private fun unreadCounts(context: Context): Map<Long, Int> {
+        val m = HashMap<Long, Int>()
+        try {
+            context.contentResolver.query(
+                Sms.CONTENT_URI, arrayOf(Sms.THREAD_ID),
+                "${Sms.READ} = 0 AND ${Sms.TYPE} = ${Sms.MESSAGE_TYPE_INBOX}", null, null,
+            )?.use { c -> while (c.moveToNext()) m.merge(c.getLong(0), 1, Int::plus) }
+            context.contentResolver.query(
+                Mms.CONTENT_URI, arrayOf(Mms.THREAD_ID),
+                "${Mms.READ} = 0 AND ${Mms.MESSAGE_BOX} = ${Mms.MESSAGE_BOX_INBOX}", null, null,
+            )?.use { c -> while (c.moveToNext()) m.merge(c.getLong(0), 1, Int::plus) }
+        } catch (_: Exception) {
+        }
+        return m
+    }
+
     fun conversations(context: Context): List<Conversation> {
         val canon = canonicalAddresses(context)
+        val counts = unreadCounts(context)
+        val pins = Prefs.pins(context)
         val out = ArrayList<Conversation>()
         context.contentResolver.query(
             THREADS_URI,
@@ -60,8 +79,10 @@ object Store {
                     recipients = recipients,
                     snippet = snippet,
                     date = c.getLong(1),
-                    unread = c.getInt(4) == 0,
+                    unread = c.getInt(4) == 0 || (counts[threadId] ?: 0) > 0,
                     hasError = c.getInt(5) != 0,
+                    unreadCount = counts[threadId] ?: if (c.getInt(4) == 0) 1 else 0,
+                    pinned = threadId in pins,
                 )
             }
         }

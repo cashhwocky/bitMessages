@@ -1,295 +1,499 @@
 package com.bitdroid.messages.ui
 
 import android.view.HapticFeedbackConstants
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Chat
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Block
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.DoneAll
+import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bitdroid.messages.data.Conversation
+import com.bitdroid.messages.data.Prefs
 import com.bitdroid.messages.data.SearchHit
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ConversationListScreen(vm: AppViewModel) {
     val conversations by vm.conversations.collectAsStateWithLifecycle()
     val loaded by vm.loaded.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
     val hits by vm.hits.collectAsStateWithLifecycle()
-    val selected = remember { mutableStateListOf<Long>() }
-    val listState = rememberLazyListState()
+    val pinOrder by vm.pins.collectAsStateWithLifecycle()
+    val swipeLeft by vm.swipeLeft.collectAsStateWithLifecycle()
+    val swipeRight by vm.swipeRight.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val view = LocalView.current
-    var menu by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
-    val fabExpanded by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 } }
+    var menuFor by remember { mutableStateOf<Conversation?>(null) }
+    var confirmDelete by remember { mutableStateOf<Conversation?>(null) }
+
+    val byId = remember(conversations) { conversations.associateBy { it.threadId } }
+    val pinned = remember(pinOrder, conversations) { pinOrder.mapNotNull { byId[it] } }
+    val rest = remember(pinOrder, conversations) { conversations.filter { it.threadId !in pinOrder } }
+    val unreadTotal = conversations.count { it.unread }
 
     val titleMatches = remember(query, conversations) {
-        if (query.isBlank()) emptyList()
-        else conversations.filter { c ->
-            c.title.contains(query, true) || c.recipients.any { it.address.filter(Char::isDigit).contains(query.filter(Char::isDigit).ifEmpty { "\u0000" }) }
+        if (query.isBlank()) emptyList() else conversations.filter { c ->
+            c.title.contains(query, true) ||
+                (query.any(Char::isDigit) && c.recipients.any { r -> r.address.filter(Char::isDigit).contains(query.filter(Char::isDigit)) })
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Bit.Black)) {
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            // Header / selection bar
-            Box(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp)) {
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = selected.isEmpty(),
-                    enter = fadeIn() + slideInVertically { -it / 2 },
-                    exit = fadeOut() + slideOutVertically { -it / 2 },
-                    modifier = Modifier.align(Alignment.CenterStart),
-                ) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "Messages",
-                            style = MaterialTheme.typography.displaySmall,
-                            color = Color.White,
-                            modifier = Modifier.padding(start = 8.dp).weight(1f),
-                        )
-                        Box {
-                            IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "Menu", tint = Color.White) }
-                            DropdownMenu(menu, { menu = false }, containerColor = Bit.SurfaceHigh) {
-                                DropdownMenuItem(text = { Text("Mark all as read") }, onClick = {
-                                    menu = false
-                                    vm.markRead(conversations.filter { it.unread }.map { it.threadId })
-                                })
-                                DropdownMenuItem(text = { Text("Blocked numbers") }, onClick = {
-                                    menu = false
-                                    vm.loadBlocked()
-                                    vm.push(Screen.Blocked)
-                                })
-                                DropdownMenuItem(text = { Text("Settings") }, onClick = {
-                                    menu = false
-                                    vm.push(Screen.Settings)
-                                })
-                            }
-                        }
-                    }
-                }
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = selected.isNotEmpty(),
-                    enter = fadeIn() + slideInVertically { it / 2 },
-                    exit = fadeOut() + slideOutVertically { it / 2 },
-                    modifier = Modifier.align(Alignment.CenterStart),
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth().clip(CircleShape).background(Bit.SurfaceHigh).padding(horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = { selected.clear() }) { Icon(Icons.Rounded.Close, "Cancel", tint = Color.White) }
-                        Text("${selected.size} selected", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { vm.markRead(selected.toList()); selected.clear() }) {
-                            Icon(Icons.Rounded.DoneAll, "Mark as read", tint = Color.White)
-                        }
-                        IconButton(onClick = {
-                            vm.block(conversations.filter { it.threadId in selected }.flatMap { c -> c.recipients.map { it.address } })
-                            selected.clear()
-                        }) { Icon(Icons.Rounded.Block, "Block", tint = Color.White) }
-                        IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Rounded.Delete, "Delete", tint = Color.White) }
-                    }
-                }
-            }
+    val openMenu: (Conversation) -> Unit = { c ->
+        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        menuFor = c
+    }
 
-            SearchPill(query, vm::setQuery, Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-            Spacer(Modifier.height(6.dp))
+    val blur by animateDpAsState(if (menuFor != null) 14.dp else 0.dp, label = "blur")
+
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.fillMaxSize().blur(blur),
+            contentPadding = PaddingValues(bottom = 130.dp),
+        ) {
+            item(key = "header") { Header(vm, unreadTotal, conversations.size) }
 
             if (query.isNotBlank()) {
-                SearchResults(titleMatches, hits, query) { vm.setQuery(""); vm.openThread(it) }
-            } else if (loaded && conversations.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.AutoMirrored.Rounded.Chat, null, tint = Bit.Lilac, modifier = Modifier.size(56.dp))
-                        Spacer(Modifier.height(12.dp))
-                        Text("No conversations yet", color = Bit.TextDim, fontSize = 16.sp)
+                searchResults(titleMatches, hits, query) { vm.setQuery(""); vm.openThread(it) }
+            } else {
+                if (pinned.isNotEmpty()) {
+                    item(key = "pins") {
+                        PinGrid(pinned, onOpen = { vm.openThread(it.threadId) }, onLong = openMenu)
                     }
                 }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(bottom = 120.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    items(conversations, key = { it.threadId }) { c ->
-                        ConversationRow(
-                            c = c,
-                            selected = c.threadId in selected,
+                if (loaded && conversations.isEmpty()) {
+                    item(key = "empty") {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 60.dp)) {
+                            Text("Nothing\nhere yet", fontFamily = Display, fontWeight = FontWeight.Black, fontSize = 38.sp, lineHeight = 42.sp, color = Bit.Outline)
+                            Spacer(Modifier.height(14.dp))
+                            Text("Tap + to start a chat.", color = Bit.TextDim, fontSize = 15.sp)
+                        }
+                    }
+                } else if (rest.isNotEmpty()) {
+                    item(key = "label") { SectionRule(if (pinned.isEmpty()) "CHATS" else "ALL CHATS") }
+                    items(rest, key = { it.threadId }) { c ->
+                        SwipeRow(
+                            left = swipeLeft,
+                            right = swipeRight,
                             modifier = Modifier.animateItem(placementSpec = Bit.placement),
-                            onClick = {
-                                if (selected.isNotEmpty()) {
-                                    if (!selected.remove(c.threadId)) selected.add(c.threadId)
-                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                } else {
-                                    vm.openThread(c.threadId)
+                            onAction = { action ->
+                                when (action) {
+                                    Prefs.Swipe.READ -> {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                                        vm.markRead(listOf(c.threadId))
+                                    }
+                                    Prefs.Swipe.DELETE -> confirmDelete = c
+                                    Prefs.Swipe.NONE -> Unit
                                 }
                             },
-                            onLongClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                                if (!selected.remove(c.threadId)) selected.add(c.threadId)
-                            },
-                        )
+                        ) {
+                            ConversationRow(c, onClick = { vm.openThread(c.threadId) }, onLong = { openMenu(c) })
+                        }
                     }
                 }
             }
         }
 
-        AnimatedVisibility(
-            visible = selected.isEmpty() && query.isBlank(),
-            enter = scaleIn(Bit.bouncy) + fadeIn(),
-            exit = scaleOut() + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(20.dp),
+        // Fade + floating dock: search pill and new chat.
+        Box(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(150.dp)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Bit.Black.copy(alpha = 0.92f), Bit.Black))),
+        )
+        Row(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().imePadding().navigationBarsPadding()
+                .padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            ExtendedFloatingActionButton(
-                onClick = {
-                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    vm.push(Screen.NewChat)
-                },
-                expanded = fabExpanded,
-                icon = { Icon(Icons.AutoMirrored.Rounded.Chat, null) },
-                text = { Text("Start chat", fontWeight = FontWeight.SemiBold) },
-                containerColor = Bit.Lilac,
-                contentColor = Bit.OnLilac,
-                shape = RoundedCornerShape(20.dp),
-            )
+            Row(
+                Modifier.weight(1f).height(62.dp).clip(CircleShape).background(Bit.Black)
+                    .border(2.5.dp, Color.White, CircleShape).padding(start = 20.dp, end = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Rounded.Search, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(12.dp))
+                Box(Modifier.weight(1f)) {
+                    if (query.isEmpty()) Text("Search", color = Bit.TextDim, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    BasicTextField(
+                        value = query,
+                        onValueChange = vm::setQuery,
+                        singleLine = true,
+                        textStyle = TextStyle(fontFamily = Body, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                        cursorBrush = SolidColor(Bit.Accent),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { vm.setQuery("") }) { Icon(Icons.Rounded.Close, "Clear", tint = Color.White) }
+                }
+            }
+            Box(
+                Modifier.size(62.dp).shadow(18.dp, CircleShape, ambientColor = Bit.Accent, spotColor = Bit.Accent)
+                    .clip(CircleShape).background(Bit.Accent)
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        vm.push(Screen.NewChat)
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.Add, "Start chat", tint = Bit.OnAccent, modifier = Modifier.size(30.dp))
+            }
+        }
+
+        // Hold menu.
+        AnimatedVisibility(menuFor != null, enter = fadeIn(), exit = fadeOut()) {
+            val c = menuFor
+            Box(
+                Modifier.fillMaxSize().background(Bit.Black.copy(alpha = 0.72f))
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { menuFor = null },
+                contentAlignment = Alignment.Center,
+            ) {
+                if (c != null) HoldMenu(
+                    c = c,
+                    pinCount = pinOrder.size,
+                    onPin = {
+                        val ok = vm.togglePin(c.threadId)
+                        if (!ok) Toast.makeText(context, "You can pin up to ${Prefs.MAX_PINS} chats", Toast.LENGTH_SHORT).show()
+                        else view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                        menuFor = null
+                    },
+                    onRead = { vm.markRead(listOf(c.threadId)); menuFor = null },
+                    onBlock = { vm.block(c.recipients.map { it.address }); menuFor = null },
+                    onDelete = { confirmDelete = c; menuFor = null },
+                )
+            }
         }
     }
 
-    if (confirmDelete) {
+    confirmDelete?.let { c ->
         AlertDialog(
-            onDismissRequest = { confirmDelete = false },
+            onDismissRequest = { confirmDelete = null },
             containerColor = Bit.SurfaceHigh,
-            title = { Text(if (selected.size == 1) "Delete conversation?" else "Delete ${selected.size} conversations?") },
-            text = { Text("This removes the messages from this phone.") },
+            title = { Text("Delete chat with ${c.title}?", fontFamily = Display, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp) },
+            text = { Text("This removes the messages from this phone.", color = Bit.TextDim) },
             confirmButton = {
-                TextButton(onClick = {
-                    vm.deleteThreads(selected.toList())
-                    selected.clear()
-                    confirmDelete = false
-                }) { Text("Delete", color = Bit.Error) }
+                TextButton(onClick = { vm.deleteThreads(listOf(c.threadId)); confirmDelete = null }) {
+                    Text("Delete", color = Bit.Error, fontWeight = FontWeight.Bold)
+                }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Cancel", color = Color.White) } },
         )
+    }
+}
+
+@Composable
+private fun Header(vm: AppViewModel, unread: Int, chats: Int) {
+    var menu by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().statusBarsPadding()) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 22.dp, end = 16.dp, top = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ToggleMark()
+            Spacer(Modifier.width(10.dp))
+            Text("BITMESSAGES", style = mono(12f, color = Bit.Accent, spacing = 1.6f), modifier = Modifier.weight(1f))
+            Box {
+                Box(
+                    Modifier.size(44.dp).clip(CircleShape).border(2.dp, Bit.OutlineSoft, CircleShape).clickable { menu = true },
+                    contentAlignment = Alignment.Center,
+                ) { MenuGlyph() }
+                DropdownMenu(menu, { menu = false }, containerColor = Bit.SurfaceHigh) {
+                    DropdownMenuItem(text = { Text("Mark all as read") }, onClick = {
+                        menu = false
+                        vm.markRead(vm.conversations.value.filter { it.unread }.map { it.threadId })
+                    })
+                    DropdownMenuItem(text = { Text("Blocked numbers") }, onClick = {
+                        menu = false
+                        vm.loadBlocked()
+                        vm.push(Screen.Blocked)
+                    })
+                    DropdownMenuItem(text = { Text("Settings") }, onClick = {
+                        menu = false
+                        vm.push(Screen.Settings)
+                    })
+                }
+            }
+        }
+        Text(
+            "Messages",
+            fontFamily = Display, fontWeight = FontWeight.Black, fontSize = 44.sp, letterSpacing = (-1.5).sp, lineHeight = 46.sp,
+            modifier = Modifier.padding(start = 20.dp, top = 18.dp),
+        )
+        val status = buildAnnotatedString {
+            if (unread > 0) {
+                pushStyle(SpanStyle(color = Bit.Accent))
+                append("$unread UNREAD")
+                pop()
+                append(" · ")
+            }
+            append("$chats CHATS")
+        }
+        Text(status, style = mono(12.5f, FontWeight.Medium, spacing = 0.6f), modifier = Modifier.padding(start = 22.dp, top = 8.dp, bottom = 8.dp))
+    }
+}
+
+/** bitDroid's toggle-switch mark. */
+@Composable
+fun ToggleMark() {
+    Box(Modifier.size(38.dp, 22.dp).clip(CircleShape).background(Bit.Accent)) {
+        Box(Modifier.align(Alignment.CenterEnd).padding(end = 3.dp).size(16.dp).clip(CircleShape).background(Bit.Black))
+    }
+}
+
+@Composable
+private fun MenuGlyph() {
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Box(Modifier.size(16.dp, 2.5.dp).clip(CircleShape).background(Color.White))
+        Box(Modifier.size(10.dp, 2.5.dp).clip(CircleShape).background(Color.White))
+    }
+}
+
+@Composable
+fun SectionRule(label: String) {
+    Row(Modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, top = 18.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = mono(11.5f, spacing = 1.6f))
+        Spacer(Modifier.width(12.dp))
+        Box(Modifier.weight(1f).height(1.dp).background(Bit.Hairline))
+    }
+}
+
+// ------------------------------------------------------------------ pins
+
+@Composable
+private fun PinGrid(pins: List<Conversation>, onOpen: (Conversation) -> Unit, onLong: (Conversation) -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 30.dp),
+        verticalArrangement = Arrangement.spacedBy(28.dp),
+    ) {
+        pins.chunked(3).forEach { row ->
+            Row(Modifier.fillMaxWidth()) {
+                row.forEach { c ->
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) { Pin(c, onOpen, onLong) }
+                }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ConversationRow(
-    c: Conversation,
-    selected: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-) {
-    val context = LocalContext.current
-    val scale by animateFloatAsState(if (selected) 0.97f else 1f, Bit.bouncy, label = "rowScale")
-    Row(
-        modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 2.dp)
-            .scale(scale)
-            .clip(RoundedCornerShape(24.dp))
-            .background(if (selected) Bit.SurfaceHigh else Color.Transparent)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box {
-            Avatar(c.recipients, 54.dp)
-            androidx.compose.animation.AnimatedVisibility(
-                visible = selected,
-                enter = scaleIn(Bit.bouncy),
-                exit = scaleOut(),
-                modifier = Modifier.align(Alignment.BottomEnd),
-            ) {
-                Icon(
-                    Icons.Rounded.CheckCircle, null, tint = Bit.Lilac,
-                    modifier = Modifier.size(22.dp).clip(CircleShape).background(Bit.Black),
+private fun Pin(c: Conversation, onOpen: (Conversation) -> Unit, onLong: (Conversation) -> Unit) {
+    val pop = remember(c.threadId) { Animatable(0.6f) }
+    LaunchedEffect(c.threadId) { pop.animateTo(1f, Bit.bouncy) }
+    val unread = c.unread
+    Box(contentAlignment = Alignment.TopCenter) {
+        Column(
+            Modifier
+                .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
+                .clip(RoundedCornerShape(24.dp))
+                .combinedClickable(onClick = { onOpen(c) }, onLongClick = { onLong(c) })
+                .padding(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier.size(106.dp)
+                        .then(if (unread) Modifier.shadow(20.dp, CircleShape, ambientColor = Bit.Accent, spotColor = Bit.Accent) else Modifier)
+                        .clip(CircleShape)
+                        .background(if (unread) Bit.Accent else Bit.Raised),
                 )
+                Avatar(c.recipients, 94.dp, Modifier.border(3.dp, Bit.Black, CircleShape))
+                if (unread) {
+                    Box(
+                        Modifier.align(Alignment.BottomEnd).offset(x = (-2).dp, y = (-4).dp)
+                            .clip(CircleShape).background(Bit.Black).padding(3.dp)
+                            .defaultMinSize(minWidth = 22.dp, minHeight = 22.dp)
+                            .clip(CircleShape).background(Bit.Accent).padding(horizontal = 6.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val n = maxOf(1, c.unreadCount)
+                        Text(if (n > 99) "99+" else "$n", style = mono(11.5f, color = Bit.OnAccent, spacing = 0f))
+                    }
+                }
+            }
+            Spacer(Modifier.height(9.dp))
+            Text(
+                c.recipients.singleOrNull()?.name ?: c.title,
+                fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 112.dp),
+            )
+        }
+        if (unread && c.snippet.isNotBlank()) {
+            // Latest message floats above the avatar.
+            Column(
+                Modifier.offset(y = (-22).dp).zIndex(3f).graphicsLayer { scaleX = pop.value; scaleY = pop.value },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    c.snippet,
+                    color = Bit.OnAccent, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 112.dp).clip(RoundedCornerShape(13.dp)).background(Bit.Accent).padding(horizontal = 10.dp, vertical = 6.dp),
+                )
+                Box(Modifier.offset(y = (-6).dp).size(10.dp).rotate(45f).background(Bit.Accent))
             }
         }
+    }
+}
+
+// ------------------------------------------------------------------ rows
+
+@Composable
+private fun SwipeRow(
+    left: Prefs.Swipe,
+    right: Prefs.Swipe,
+    modifier: Modifier,
+    onAction: (Prefs.Swipe) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    if (left == Prefs.Swipe.NONE && right == Prefs.Swipe.NONE) {
+        Box(modifier) { content() }
+        return
+    }
+    val state = rememberSwipeToDismissBoxState(
+        confirmValueChange = { v ->
+            when (v) {
+                SwipeToDismissBoxValue.StartToEnd -> onAction(right)
+                SwipeToDismissBoxValue.EndToStart -> onAction(left)
+                else -> Unit
+            }
+            false // always snap back; delete asks first
+        },
+    )
+    SwipeToDismissBox(
+        state = state,
+        modifier = modifier,
+        enableDismissFromStartToEnd = right != Prefs.Swipe.NONE,
+        enableDismissFromEndToStart = left != Prefs.Swipe.NONE,
+        backgroundContent = {
+            val dir = state.dismissDirection
+            val action = when (dir) {
+                SwipeToDismissBoxValue.StartToEnd -> right
+                SwipeToDismissBoxValue.EndToStart -> left
+                else -> Prefs.Swipe.NONE
+            }
+            if (action != Prefs.Swipe.NONE) {
+                val bg = if (action == Prefs.Swipe.DELETE) Bit.ErrorContainer else Bit.Accent
+                val fg = if (action == Prefs.Swipe.DELETE) Color.White else Bit.OnAccent
+                Row(
+                    Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 3.dp).clip(RoundedCornerShape(26.dp)).background(bg).padding(horizontal = 26.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = if (dir == SwipeToDismissBoxValue.StartToEnd) Arrangement.Start else Arrangement.End,
+                ) {
+                    Icon(if (action == Prefs.Swipe.DELETE) Icons.Rounded.Delete else Icons.Rounded.Done, null, tint = fg)
+                    Spacer(Modifier.width(10.dp))
+                    Text(if (action == Prefs.Swipe.DELETE) "DELETE" else "MARK READ", style = mono(12f, color = fg, spacing = 1.2f))
+                }
+            }
+        },
+    ) {
+        Box(Modifier.background(Bit.Black)) { content() }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ConversationRow(c: Conversation, onClick: () -> Unit, onLong: () -> Unit) {
+    val context = LocalContext.current
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 1.dp).clip(RoundedCornerShape(24.dp))
+            .combinedClickable(onClick = onClick, onLongClick = onLong)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Avatar(c.recipients, 54.dp)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    c.title,
-                    color = Color.White,
-                    fontSize = 17.sp,
-                    fontWeight = if (c.unread) FontWeight.Bold else FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                    c.title, fontSize = 17.5.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.3).sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    shortTime(context, c.date),
-                    color = if (c.unread) Bit.Lilac else Bit.TextDim,
-                    fontSize = 13.sp,
-                    fontWeight = if (c.unread) FontWeight.Bold else FontWeight.Normal,
+                    shortTime(context, c.date).uppercase(),
+                    style = mono(11.5f, if (c.unread) FontWeight.Bold else FontWeight.Medium, if (c.unread) Bit.Accent else Bit.TextDim, 0.4f),
                 )
             }
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (c.hasError) {
                     Icon(Icons.Rounded.ErrorOutline, null, tint = Bit.Error, modifier = Modifier.size(16.dp))
@@ -298,91 +502,156 @@ private fun ConversationRow(
                 Text(
                     if (c.hasError) "Not sent" else c.snippet,
                     color = if (c.hasError) Bit.Error else if (c.unread) Color.White else Bit.TextDim,
-                    fontSize = 15.sp,
-                    fontWeight = if (c.unread) FontWeight.SemiBold else FontWeight.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                    fontSize = 14.5.sp, fontWeight = if (c.unread) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                 )
                 if (c.unread) {
                     Spacer(Modifier.width(8.dp))
-                    Box(Modifier.size(10.dp).clip(CircleShape).background(Bit.Lilac))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SearchResults(conversations: List<Conversation>, hits: List<SearchHit>, query: String, onOpen: (Long) -> Unit) {
-    val context = LocalContext.current
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 40.dp)) {
-        if (conversations.isNotEmpty()) {
-            item { SectionLabel("Conversations") }
-            items(conversations, key = { "c${it.threadId}" }) { c ->
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).combinedClickableSimple { onOpen(c.threadId) }
-                        .padding(horizontal = 20.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Avatar(c.recipients, 44.dp)
-                    Spacer(Modifier.width(14.dp))
-                    Text(c.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                }
-            }
-        }
-        if (hits.isNotEmpty()) {
-            item { SectionLabel("Messages") }
-            items(hits.size) { i ->
-                val h = hits[i]
-                Row(
-                    Modifier.fillMaxWidth().combinedClickableSimple { onOpen(h.threadId) }
-                        .padding(horizontal = 20.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Avatar(listOfNotNull(h.contact), 44.dp)
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        Row {
-                            Text(h.title, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            Text(shortTime(context, h.date), color = Bit.TextDim, fontSize = 13.sp)
-                        }
-                        Text(highlight(h.body, query), color = Bit.TextDim, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Box(
+                        Modifier.defaultMinSize(minWidth = 22.dp, minHeight = 22.dp).clip(CircleShape).background(Bit.Accent).padding(horizontal = 7.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val n = maxOf(1, c.unreadCount)
+                        Text(if (n > 99) "99+" else "$n", style = mono(11.5f, color = Bit.OnAccent, spacing = 0f))
                     }
                 }
             }
         }
-        if (conversations.isEmpty() && hits.isEmpty()) {
-            item {
-                Box(Modifier.fillMaxWidth().padding(top = 60.dp), contentAlignment = Alignment.Center) {
-                    Text("No results", color = Bit.TextDim)
-                }
+    }
+}
+
+// ------------------------------------------------------------- hold menu
+
+@Composable
+private fun HoldMenu(
+    c: Conversation,
+    pinCount: Int,
+    onPin: () -> Unit,
+    onRead: () -> Unit,
+    onBlock: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val context = LocalContext.current
+    val lift = remember { Animatable(0.85f) }
+    LaunchedEffect(Unit) { lift.animateTo(1f, Bit.bouncy) }
+    Column(
+        Modifier.padding(horizontal = 14.dp)
+            .graphicsLayer { scaleX = lift.value; scaleY = lift.value; alpha = ((lift.value - 0.85f) / 0.15f).coerceIn(0f, 1f) }
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Bit.SurfaceHigh).padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Avatar(c.recipients, 52.dp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(c.title, fontSize = 16.5.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(c.snippet, color = Bit.TextDim, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            Spacer(Modifier.width(8.dp))
+            Text(shortTime(context, c.date).uppercase(), style = mono(11.5f))
+        }
+        Column(Modifier.width(260.dp).clip(RoundedCornerShape(24.dp)).background(Bit.SurfaceHigh).padding(8.dp)) {
+            val full = !c.pinned && pinCount >= Prefs.MAX_PINS
+            MenuRow(
+                label = if (c.pinned) "Unpin" else "Pin",
+                icon = { Icon(Icons.Rounded.PushPin, null, tint = it) },
+                highlight = true,
+                trailing = if (c.pinned) null else if (full) "FULL" else "${pinCount + 1} OF ${Prefs.MAX_PINS}",
+                dim = full,
+                onClick = onPin,
+            )
+            if (c.unread) MenuRow("Mark as read", { Icon(Icons.Rounded.Done, null, tint = it) }, onClick = onRead)
+            MenuRow("Block", { Icon(Icons.Rounded.Block, null, tint = it) }, onClick = onBlock)
+            Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp).height(1.dp).background(Bit.Outline))
+            MenuRow("Delete", { Icon(Icons.Rounded.Delete, null, tint = it) }, color = Bit.Error, onClick = onDelete)
         }
     }
 }
 
 @Composable
-fun SectionLabel(text: String) {
-    Text(
-        text,
-        color = Bit.Lilac,
-        fontWeight = FontWeight.Bold,
-        fontSize = 13.sp,
-        modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 6.dp),
-    )
+private fun MenuRow(
+    label: String,
+    icon: @Composable (Color) -> Unit,
+    highlight: Boolean = false,
+    trailing: String? = null,
+    dim: Boolean = false,
+    color: Color = Color.White,
+    onClick: () -> Unit,
+) {
+    val bg = if (highlight) Bit.Accent.copy(alpha = if (dim) 0.4f else 1f) else Color.Transparent
+    val fg = if (highlight) Bit.OnAccent else color
+    Row(
+        Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp)).background(bg).clickable(onClick = onClick).padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        icon(fg)
+        Spacer(Modifier.width(14.dp))
+        Text(label, color = fg, fontSize = 16.sp, fontWeight = if (highlight) FontWeight.ExtraBold else FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        trailing?.let { Text(it, style = mono(11f, color = fg.copy(alpha = 0.75f), spacing = 0.6f)) }
+    }
 }
 
-private fun highlight(body: String, query: String): androidx.compose.ui.text.AnnotatedString {
-    val b = androidx.compose.ui.text.AnnotatedString.Builder()
+// ---------------------------------------------------------------- search
+
+private fun LazyListScope.searchResults(
+    conversations: List<Conversation>,
+    hits: List<SearchHit>,
+    query: String,
+    onOpen: (Long) -> Unit,
+) {
+    if (conversations.isNotEmpty()) {
+        item(key = "sc") { SectionRule("CHATS") }
+        items(conversations, key = { "c${it.threadId}" }) { c ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onOpen(c.threadId) }.padding(horizontal = 22.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Avatar(c.recipients, 46.dp)
+                Spacer(Modifier.width(14.dp))
+                Text(c.title, fontSize = 16.5.sp, fontWeight = FontWeight.ExtraBold)
+            }
+        }
+    }
+    if (hits.isNotEmpty()) {
+        item(key = "sm") { SectionRule("MESSAGES") }
+        items(hits.size, key = { "h$it" }) { i ->
+            val h = hits[i]
+            val context = LocalContext.current
+            Row(
+                Modifier.fillMaxWidth().clickable { onOpen(h.threadId) }.padding(horizontal = 22.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Avatar(listOfNotNull(h.contact), 46.dp)
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Row {
+                        Text(h.title, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(shortTime(context, h.date).uppercase(), style = mono(11f))
+                    }
+                    Text(highlight(h.body, query), color = Bit.TextDim, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+    if (conversations.isEmpty() && hits.isEmpty()) {
+        item(key = "none") {
+            Text("NO RESULTS", style = mono(12f, spacing = 1.4f), modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 40.dp))
+        }
+    }
+}
+
+private fun highlight(body: String, query: String): AnnotatedString {
+    val b = AnnotatedString.Builder()
     val idx = body.indexOf(query, ignoreCase = true)
     if (idx < 0) {
         b.append(body)
     } else {
         val start = maxOf(0, idx - 30)
-        val prefix = if (start > 0) "…" else ""
-        b.append(prefix + body.substring(start, idx))
-        b.pushStyle(androidx.compose.ui.text.SpanStyle(color = Bit.Lilac, fontWeight = FontWeight.Bold))
+        b.append((if (start > 0) "…" else "") + body.substring(start, idx))
+        b.pushStyle(SpanStyle(color = Bit.Accent, fontWeight = FontWeight.Bold))
         b.append(body.substring(idx, idx + query.length))
         b.pop()
         b.append(body.substring(idx + query.length))
@@ -390,6 +659,6 @@ private fun highlight(body: String, query: String): androidx.compose.ui.text.Ann
     return b.toAnnotatedString()
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-fun Modifier.combinedClickableSimple(onClick: () -> Unit): Modifier = this.combinedClickable(onClick = onClick)
-
+/** Section header used by the other screens. */
+@Composable
+fun SectionLabel(text: String) = SectionRule(text.uppercase())

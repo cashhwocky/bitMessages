@@ -32,7 +32,7 @@ object Notifier {
     const val TAG_LOCKED = "locked"
     const val TAG_FAILED = "failed"
     const val KEY_REPLY = "reply"
-    private const val ACCENT = 0xFFEADDFF.toInt()
+    private const val ACCENT = 0xFFA8C7FA.toInt()
 
     private fun nm(context: Context) = context.getSystemService(NotificationManager::class.java)
 

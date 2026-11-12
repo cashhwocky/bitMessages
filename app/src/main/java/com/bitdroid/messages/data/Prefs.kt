@@ -35,6 +35,47 @@ object Prefs {
         get(context).edit().putBoolean("group_mms", on).apply()
     }
 
+    // ---------------------------------------------------------------- pins
+
+    const val MAX_PINS = 6
+
+    fun pins(context: Context): List<Long> =
+        (get(context).getString("pins", "") ?: "").split(',').mapNotNull { it.toLongOrNull() }
+
+    fun setPins(context: Context, ids: List<Long>) {
+        get(context).edit().putString("pins", ids.distinct().take(MAX_PINS).joinToString(",")).apply()
+    }
+
+    /** Pins [threadId]; returns false when all 6 slots are taken. */
+    fun pin(context: Context, threadId: Long): Boolean {
+        val cur = pins(context)
+        if (threadId in cur) return true
+        if (cur.size >= MAX_PINS) return false
+        setPins(context, cur + threadId)
+        return true
+    }
+
+    fun unpin(context: Context, threadId: Long) = setPins(context, pins(context) - threadId)
+
+    // --------------------------------------------------------- swipe actions
+
+    enum class Swipe { NONE, READ, DELETE }
+
+    fun swipeLeft(context: Context): Swipe =
+        runCatching { Swipe.valueOf(get(context).getString("swipe_left", "NONE")!!) }.getOrDefault(Swipe.NONE)
+
+    fun swipeRight(context: Context): Swipe =
+        runCatching { Swipe.valueOf(get(context).getString("swipe_right", "NONE")!!) }.getOrDefault(Swipe.NONE)
+
+    fun setSwipeLeft(context: Context, s: Swipe) = get(context).edit().putString("swipe_left", s.name).apply()
+    fun setSwipeRight(context: Context, s: Swipe) = get(context).edit().putString("swipe_right", s.name).apply()
+
+    // ------------------------------------------------------------- look
+
+    /** Faint Material You (Monet) glow behind the black. Off by default. */
+    fun monetBackground(context: Context): Boolean = get(context).getBoolean("monet_bg", false)
+    fun setMonetBackground(context: Context, on: Boolean) = get(context).edit().putBoolean("monet_bg", on).apply()
+
     fun nextId(context: Context): Int {
         val p = get(context)
         synchronized(this) {

@@ -7,37 +7,67 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
+import com.bitdroid.messages.R
 
 object Bit {
-    val Black = Color(0xFF0B0A10)
-    val Lilac = Color(0xFFEADDFF)
-    val OnLilac = Color(0xFF21005D)
-    val Surface = Color(0xFF16151C)
-    val SurfaceHigh = Color(0xFF201E27)
-    val Theirs = Color(0xFF2A2931)
+    /** True AMOLED black everywhere. */
+    val Black = Color(0xFF000000)
+    val Accent = Color(0xFFA8C7FA)
+    val OnAccent = Color(0xFF062E6F)
+    val AccentGlow = Color(0x66A8C7FA)
+    val Surface = Color(0xFF0C0B10)
+    val SurfaceHigh = Color(0xFF16151C)
+    val Raised = Color(0xFF1A1920)
+    val Outline = Color(0xFF2E2C38)
+    val OutlineSoft = Color(0xFF2A2833)
+    val Hairline = Color(0xFF1A1920)
     val Text = Color(0xFFFFFFFF)
     val TextDim = Color(0xFFA9A6B4)
-    val Divider = Color(0xFF26242D)
     val Error = Color(0xFFFFB4AB)
     val ErrorContainer = Color(0xFF93000A)
 
-    /** Shared spring specs so everything moves with the same feel. */
+    // Kept so older call sites read naturally.
+    val Lilac get() = Accent
+    val OnLilac get() = OnAccent
+    val Theirs get() = Raised
+    val Divider get() = Hairline
+
     val bouncy = spring<Float>(dampingRatio = 0.62f, stiffness = Spring.StiffnessMediumLow)
     val smooth = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
     val placement = spring<IntOffset>(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)
 }
 
+@OptIn(ExperimentalTextApi::class)
+private fun variable(res: Int, vararg weights: Int): FontFamily = FontFamily(
+    weights.map { w ->
+        Font(res, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
+/** Big, wide display type for titles and names. */
+val Display: FontFamily = variable(R.font.unbounded, 600, 700, 800, 900)
+
+/** Monospace for timestamps, counts, labels. */
+val Mono: FontFamily = variable(R.font.jetbrains_mono, 500, 700)
+
+/** Body text. */
+val Body: FontFamily = variable(R.font.inter, 400, 500, 600, 700, 800)
+
 private val scheme = darkColorScheme(
-    primary = Bit.Lilac,
-    onPrimary = Bit.OnLilac,
-    primaryContainer = Bit.Lilac,
-    onPrimaryContainer = Bit.OnLilac,
-    secondary = Bit.Lilac,
-    onSecondary = Bit.OnLilac,
+    primary = Bit.Accent,
+    onPrimary = Bit.OnAccent,
+    primaryContainer = Bit.Accent,
+    onPrimaryContainer = Bit.OnAccent,
+    secondary = Bit.Accent,
+    onSecondary = Bit.OnAccent,
     background = Bit.Black,
     onBackground = Bit.Text,
     surface = Bit.Black,
@@ -50,25 +80,37 @@ private val scheme = darkColorScheme(
     surfaceContainerLow = Bit.Surface,
     surfaceContainerLowest = Bit.Black,
     outline = Bit.TextDim,
-    outlineVariant = Bit.Divider,
+    outlineVariant = Bit.Hairline,
     error = Bit.Error,
     errorContainer = Bit.ErrorContainer,
 )
 
 private val base = Typography()
 private val typography = Typography(
-    displaySmall = base.displaySmall.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
-    headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.Bold),
-    titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-    titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-    bodyLarge = base.bodyLarge.copy(fontSize = 16.sp, lineHeight = 22.sp),
-    bodyMedium = base.bodyMedium,
-    labelSmall = base.labelSmall,
+    displaySmall = base.displaySmall.copy(fontFamily = Display, fontWeight = FontWeight.Black),
+    headlineMedium = base.headlineMedium.copy(fontFamily = Display, fontWeight = FontWeight.ExtraBold),
+    titleLarge = base.titleLarge.copy(fontFamily = Display, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp),
+    titleMedium = base.titleMedium.copy(fontFamily = Body, fontWeight = FontWeight.SemiBold),
+    bodyLarge = base.bodyLarge.copy(fontFamily = Body, fontSize = 16.sp, lineHeight = 22.sp),
+    bodyMedium = base.bodyMedium.copy(fontFamily = Body),
+    bodySmall = base.bodySmall.copy(fontFamily = Body),
+    labelLarge = base.labelLarge.copy(fontFamily = Body, fontWeight = FontWeight.Bold),
+    labelMedium = base.labelMedium.copy(fontFamily = Body),
+    labelSmall = base.labelSmall.copy(fontFamily = Mono),
 )
 
 @Composable
 fun BitTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = scheme, typography = typography, content = content)
+    MaterialTheme(colorScheme = scheme, typography = typography) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalTextStyle provides TextStyle(fontFamily = Body, color = Bit.Text),
+            content = content,
+        )
+    }
 }
 
-val BubbleText = TextStyle(fontSize = 16.sp, lineHeight = 21.sp)
+val BubbleText = TextStyle(fontFamily = Body, fontSize = 16.sp, lineHeight = 21.sp)
+
+/** Monospace tag text: TIMES, COUNTS, LABELS. */
+fun mono(size: Float, weight: FontWeight = FontWeight.Bold, color: Color = Bit.TextDim, spacing: Float = 0.8f) =
+    TextStyle(fontFamily = Mono, fontSize = size.sp, fontWeight = weight, color = color, letterSpacing = spacing.sp)

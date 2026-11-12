@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bitdroid.messages.ui.AppViewModel
@@ -44,9 +45,13 @@ import com.bitdroid.messages.ui.ThreadScreen
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
 
+    /** True after a default-SMS request came back refused (e.g. Android's restricted settings). */
+    private val roleRefused = androidx.compose.runtime.mutableStateOf(false)
+
     private val roleLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         vm.onResume()
-        requestRuntimePermissions()
+        roleRefused.value = !vm.isDefault.value
+        if (vm.isDefault.value) requestRuntimePermissions()
     }
 
     private val permsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -60,9 +65,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             BitTheme {
                 val isDefault by vm.isDefault.collectAsStateWithLifecycle()
-                Box(Modifier.fillMaxSize().background(Bit.Black)) {
+                val monet by vm.monet.collectAsStateWithLifecycle()
+                Box(Modifier.fillMaxSize().background(Bit.Black).monetGlow(monet)) {
                     if (!isDefault) {
-                        SetupScreen(onSetDefault = ::requestRole)
+                        SetupScreen(onSetDefault = ::requestRole, blocked = roleRefused.value)
                     } else {
                         BackHandler(enabled = vm.stack.size > 1) { vm.back() }
                         val target = vm.stack.last()
@@ -165,6 +171,30 @@ class MainActivity : ComponentActivity() {
                 vm.pendingShare = Draft(text ?: "", images)
                 if (recipients.isNotEmpty()) vm.openAddresses(recipients, null) else vm.openAddresses(emptyList(), null)
             }
+        }
+    }
+
+    /** Very faint Material You (Monet) light behind the black, when turned on in Settings. */
+    private fun Modifier.monetGlow(on: Boolean): Modifier {
+        if (!on) return this
+        val dyn = androidx.compose.material3.dynamicDarkColorScheme(this@MainActivity)
+        val a = dyn.primary
+        val b = dyn.tertiary
+        return this.drawBehind {
+            drawRect(
+                androidx.compose.ui.graphics.Brush.radialGradient(
+                    listOf(a.copy(alpha = 0.16f), androidx.compose.ui.graphics.Color.Transparent),
+                    center = androidx.compose.ui.geometry.Offset(size.width * 0.1f, 0f),
+                    radius = size.width * 1.15f,
+                ),
+            )
+            drawRect(
+                androidx.compose.ui.graphics.Brush.radialGradient(
+                    listOf(b.copy(alpha = 0.10f), androidx.compose.ui.graphics.Color.Transparent),
+                    center = androidx.compose.ui.geometry.Offset(size.width, size.height),
+                    radius = size.width * 1.1f,
+                ),
+            )
         }
     }
 

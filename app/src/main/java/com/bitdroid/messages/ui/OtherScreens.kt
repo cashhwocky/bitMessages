@@ -126,7 +126,7 @@ fun NewChatScreen(vm: AppViewModel) {
         vm.openAddresses(all, null)
     }
 
-    Column(Modifier.fillMaxSize().background(Bit.Black).imePadding()) {
+    Column(Modifier.fillMaxSize().imePadding()) {
         TopBar("New message", onBack = { vm.back() }) {
             val enabled = picked.isNotEmpty() || looksLikeAddress(input)
             TextButton(
@@ -237,7 +237,7 @@ fun BlockedScreen(vm: AppViewModel) {
     var input by remember { mutableStateOf("") }
     LaunchedEffect(Unit) { vm.loadBlocked() }
 
-    Column(Modifier.fillMaxSize().background(Bit.Black).imePadding()) {
+    Column(Modifier.fillMaxSize().imePadding()) {
         TopBar("Blocked numbers", onBack = { vm.back() })
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).height(54.dp)
@@ -297,8 +297,11 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
     var delivery by remember { mutableStateOf(Prefs.deliveryReports(context)) }
     var groupMms by remember { mutableStateOf(Prefs.groupMms(context)) }
     val sims by vm.sims.collectAsStateWithLifecycle()
+    val monet by vm.monet.collectAsStateWithLifecycle()
+    val swipeLeft by vm.swipeLeft.collectAsStateWithLifecycle()
+    val swipeRight by vm.swipeRight.collectAsStateWithLifecycle()
 
-    Column(Modifier.fillMaxSize().background(Bit.Black)) {
+    Column(Modifier.fillMaxSize()) {
         TopBar("Settings", onBack = { vm.back() })
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 40.dp)) {
             item { SectionLabel("Messages") }
@@ -322,6 +325,33 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
                     vm.push(Screen.Blocked)
                 }
             }
+            item { SectionLabel("Look") }
+            item {
+                ToggleRow("Monet background", "A faint glow in your wallpaper colors behind the black", monet) {
+                    vm.setMonet(it)
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                }
+            }
+            item { SectionLabel("Swipe actions") }
+            item {
+                Text(
+                    "Off by default. Choose what swiping a chat does in your list.",
+                    color = Bit.TextDim, fontSize = 14.sp,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+                )
+            }
+            item {
+                SwipeChoice("Swipe right", swipeRight) {
+                    vm.setSwipeRight(it)
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                }
+            }
+            item {
+                SwipeChoice("Swipe left", swipeLeft) {
+                    vm.setSwipeLeft(it)
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                }
+            }
             if (sims.isNotEmpty()) {
                 item { SectionLabel("SIMs") }
                 items(sims, key = { it.subId }) { s ->
@@ -329,7 +359,7 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
                 }
             }
             item { SectionLabel("About") }
-            item { SettingRow("bitMessages", "SMS and MMS for bitDroid · v0.1.0") {} }
+            item { SettingRow("bitMessages", "SMS and MMS for bitDroid · v0.2.0") {} }
         }
     }
 }
@@ -360,6 +390,26 @@ private fun ToggleRow(title: String, subtitle: String, value: Boolean, onChange:
 }
 
 @Composable
+private fun SwipeChoice(title: String, value: Prefs.Swipe, onChange: (Prefs.Swipe) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) {
+        Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(Prefs.Swipe.NONE to "OFF", Prefs.Swipe.READ to "MARK READ", Prefs.Swipe.DELETE to "DELETE").forEach { (opt, label) ->
+                val on = opt == value
+                Box(
+                    Modifier.height(40.dp).clip(CircleShape)
+                        .then(if (on) Modifier.background(Bit.Accent) else Modifier.border(2.dp, Bit.OutlineSoft, CircleShape))
+                        .clickable { onChange(opt) }
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text(label, style = mono(11.5f, color = if (on) Bit.OnAccent else Color.White, spacing = 0.8f)) }
+            }
+        }
+    }
+}
+
+@Composable
 private fun SettingRow(title: String, subtitle: String, onClick: () -> Unit) {
     Column(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 14.dp)) {
         Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium)
@@ -370,12 +420,13 @@ private fun SettingRow(title: String, subtitle: String, onClick: () -> Unit) {
 // ============================================================== setup
 
 @Composable
-fun SetupScreen(onSetDefault: () -> Unit) {
+fun SetupScreen(onSetDefault: () -> Unit, blocked: Boolean = false) {
+    val context = LocalContext.current
     val view = LocalView.current
     val float = remember { Animatable(0.6f) }
     LaunchedEffect(Unit) { float.animateTo(1f, Bit.bouncy) }
     Column(
-        Modifier.fillMaxSize().background(Bit.Black).statusBarsPadding().navigationBarsPadding().padding(28.dp),
+        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -403,6 +454,32 @@ fun SetupScreen(onSetDefault: () -> Unit) {
             contentAlignment = Alignment.Center,
         ) {
             Text("Set as default", color = Bit.OnLilac, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        }
+        if (blocked) {
+            Spacer(Modifier.height(22.dp))
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).border(2.dp, Bit.Outline, RoundedCornerShape(24.dp)).padding(20.dp),
+            ) {
+                Text("DIDN'T WORK?", style = mono(11.5f, color = Bit.Accent, spacing = 1.4f))
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "If Android said the app was denied access, apps installed from an APK file need one extra step:\n\n1. Open App info below\n2. Tap ⋮ in the top corner → Allow restricted settings\n3. Come back and tap Set as default",
+                    color = Color.White, fontSize = 14.5.sp, lineHeight = 21.sp,
+                )
+                Spacer(Modifier.height(14.dp))
+                Box(
+                    Modifier.fillMaxWidth().height(50.dp).clip(CircleShape).border(2.5.dp, Color.White, CircleShape)
+                        .clickable {
+                            context.startActivity(
+                                android.content.Intent(
+                                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    android.net.Uri.fromParts("package", context.packageName, null),
+                                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        },
+                    contentAlignment = Alignment.Center,
+                ) { Text("Open App info", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+            }
         }
     }
 }

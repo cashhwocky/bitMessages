@@ -6,6 +6,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Upload the APK to this existing release (e.g. v0.1.0). Leave empty to just build."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -49,11 +54,13 @@ jobs:
           ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease
 
       - name: Check tag matches versionName
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
+        env:
+          TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
-          want="${GITHUB_REF_NAME#v}"
+          want="${TAG#v}"
           ls app/build/outputs/apk/release/ | grep -q "bitMessages-${want}-release.apk" || {
-            echo "::error::Tag $GITHUB_REF_NAME does not match versionName in app/build.gradle.kts"; exit 1; }
+            echo "::error::Tag $TAG does not match versionName in app/build.gradle.kts"; exit 1; }
 
       - name: Collect APKs
         run: |
@@ -68,8 +75,9 @@ jobs:
           path: out/*.apk
 
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
           files: out/*-release.apk
           generate_release_notes: true

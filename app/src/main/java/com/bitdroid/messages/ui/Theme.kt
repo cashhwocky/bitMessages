@@ -6,6 +6,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
@@ -18,19 +21,26 @@ import androidx.compose.ui.unit.sp
 import com.bitdroid.messages.R
 
 object Bit {
-    /** True AMOLED black everywhere. */
-    val Black = Color(0xFF000000)
-    val Accent = Color(0xFFA8C7FA)
-    val OnAccent = Color(0xFF062E6F)
-    val AccentGlow = Color(0x66A8C7FA)
-    val Surface = Color(0xFF0C0B10)
-    val SurfaceHigh = Color(0xFF16151C)
-    val Raised = Color(0xFF1A1920)
-    val Outline = Color(0xFF2E2C38)
-    val OutlineSoft = Color(0xFF2A2833)
-    val Hairline = Color(0xFF1A1920)
+    /** Current theme colors; a snapshot state, so changing it recolors the whole app live. */
+    var palette by mutableStateOf(Themes.AMOLED)
+
+    /** Loads the saved theme (Material You colors come from the wallpaper). */
+    fun apply(context: android.content.Context) {
+        palette = Themes.palette(context, Themes.current(context))
+    }
+
+    val Black: Color get() = palette.bg
+    val Accent: Color get() = palette.accent
+    val OnAccent: Color get() = palette.onAccent
+    val AccentGlow: Color get() = palette.accent.copy(alpha = 0.4f)
+    val Surface: Color get() = palette.surface
+    val SurfaceHigh: Color get() = palette.surfaceHigh
+    val Raised: Color get() = palette.raised
+    val Outline: Color get() = palette.outline
+    val OutlineSoft: Color get() = palette.outlineSoft
+    val Hairline: Color get() = palette.hairline
     val Text = Color(0xFFFFFFFF)
-    val TextDim = Color(0xFFA9A6B4)
+    val TextDim: Color get() = palette.textDim
     val Error = Color(0xFFFFB4AB)
     val ErrorContainer = Color(0xFF93000A)
 
@@ -61,7 +71,7 @@ val Mono: FontFamily = variable(R.font.jetbrains_mono, 500, 700)
 /** Body text. */
 val Body: FontFamily = variable(R.font.inter, 400, 500, 600, 700, 800)
 
-private val scheme = darkColorScheme(
+private fun scheme() = darkColorScheme(
     primary = Bit.Accent,
     onPrimary = Bit.OnAccent,
     primaryContainer = Bit.Accent,
@@ -101,7 +111,7 @@ private val typography = Typography(
 
 @Composable
 fun BitTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = scheme, typography = typography) {
+    MaterialTheme(colorScheme = scheme(), typography = typography) {
         androidx.compose.runtime.CompositionLocalProvider(
             androidx.compose.material3.LocalTextStyle provides TextStyle(fontFamily = Body, color = Bit.Text),
             content = content,
@@ -114,3 +124,63 @@ val BubbleText = TextStyle(fontFamily = Body, fontSize = 16.sp, lineHeight = 21.
 /** Monospace tag text: TIMES, COUNTS, LABELS. */
 fun mono(size: Float, weight: FontWeight = FontWeight.Bold, color: Color = Bit.TextDim, spacing: Float = 0.8f) =
     TextStyle(fontFamily = Mono, fontSize = size.sp, fontWeight = weight, color = color, letterSpacing = spacing.sp)
+
+data class Palette(
+    val bg: Color,
+    val accent: Color,
+    val onAccent: Color,
+    val surface: Color,
+    val surfaceHigh: Color,
+    val raised: Color,
+    val outline: Color,
+    val outlineSoft: Color,
+    val hairline: Color,
+    val textDim: Color,
+)
+
+/** App themes: AMOLED black (default), two accent variants, and Material You gray. */
+object Themes {
+    data class Choice(val key: String, val label: String)
+
+    val all = listOf(
+        Choice("amoled", "AMOLED"),
+        Choice("lilac", "LILAC"),
+        Choice("mint", "MINT"),
+        Choice("you", "MATERIAL YOU"),
+    )
+
+    private fun black(accent: Long, onAccent: Long) = Palette(
+        bg = Color(0xFF000000), accent = Color(accent), onAccent = Color(onAccent),
+        surface = Color(0xFF0C0B10), surfaceHigh = Color(0xFF16151C), raised = Color(0xFF1A1920),
+        outline = Color(0xFF2E2C38), outlineSoft = Color(0xFF2A2833), hairline = Color(0xFF1A1920),
+        textDim = Color(0xFFA9A6B4),
+    )
+
+    val AMOLED = black(0xFFA8C7FA, 0xFF062E6F)
+    private val LILAC = black(0xFFEADDFF, 0xFF21005D)
+    private val MINT = black(0xFFA6F2C9, 0xFF00391F)
+
+    fun current(context: android.content.Context): String =
+        com.bitdroid.messages.data.Prefs.get(context).getString("app_theme", "amoled") ?: "amoled"
+
+    fun set(context: android.content.Context, key: String) {
+        com.bitdroid.messages.data.Prefs.get(context).edit().putString("app_theme", key).apply()
+        Bit.palette = palette(context, key)
+    }
+
+    fun palette(context: android.content.Context, key: String): Palette = when (key) {
+        "lilac" -> LILAC
+        "mint" -> MINT
+        "you" -> {
+            // Android's own dark gray surfaces with the wallpaper accent, like Pixel settings.
+            val d = androidx.compose.material3.dynamicDarkColorScheme(context)
+            Palette(
+                bg = d.surfaceContainer, accent = d.primary, onAccent = d.onPrimary,
+                surface = d.surfaceContainerHigh, surfaceHigh = d.surfaceContainerHighest, raised = d.surfaceContainerHighest,
+                outline = d.outlineVariant, outlineSoft = d.outlineVariant, hairline = d.surfaceContainerHighest,
+                textDim = d.onSurfaceVariant,
+            )
+        }
+        else -> AMOLED
+    }
+}

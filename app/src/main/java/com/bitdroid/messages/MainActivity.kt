@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        Bit.apply(this)
         if (savedInstanceState == null) handleIntent(intent)
         setContent {
             BitTheme {
@@ -144,6 +145,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        Bit.apply(this) // picks up wallpaper color changes for Material You
         vm.onResume()
         val t = vm.current
         visibleThread = if (t is Screen.Thread) t.threadId else -1

@@ -327,6 +327,7 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
                 }
             }
             item { SectionLabel("Look") }
+            item { ThemePicker() }
             item { IconPicker() }
             item {
                 ToggleRow("Monet background", "A faint glow in your wallpaper colors behind the black", monet) {
@@ -382,7 +383,7 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
                 }
             }
             item { SectionLabel("About") }
-            item { SettingRow("bitMessages", "SMS and MMS for bitDroid · v0.4.0") {} }
+            item { SettingRow("bitMessages", "SMS and MMS for bitDroid · v0.5.0") {} }
         }
     }
 }

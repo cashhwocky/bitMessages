@@ -1,0 +1,75 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # The runner image ships the Android SDK; just accept licenses so AGP can fetch platform 35 if needed.
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Optional release signing. Add these repo secrets to sign with your own key:
+      # BITMESSAGES_KEYSTORE_B64 (base64 of the .jks), BITMESSAGES_KEYSTORE_PASSWORD,
+      # BITMESSAGES_KEY_ALIAS, BITMESSAGES_KEY_PASSWORD. Without them the release APK is debug-signed.
+      - name: Decode signing key
+        env:
+          KS_B64: ${{ secrets.BITMESSAGES_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/bitmessages.jks"
+            echo "BITMESSAGES_KEYSTORE=$RUNNER_TEMP/bitmessages.jks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build
+        env:
+          BITMESSAGES_KEYSTORE_PASSWORD: ${{ secrets.BITMESSAGES_KEYSTORE_PASSWORD }}
+          BITMESSAGES_KEY_ALIAS: ${{ secrets.BITMESSAGES_KEY_ALIAS }}
+          BITMESSAGES_KEY_PASSWORD: ${{ secrets.BITMESSAGES_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease
+
+      - name: Check tag matches versionName
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          want="${GITHUB_REF_NAME#v}"
+          ls app/build/outputs/apk/release/ | grep -q "bitMessages-${want}-release.apk" || {
+            echo "::error::Tag $GITHUB_REF_NAME does not match versionName in app/build.gradle.kts"; exit 1; }
+
+      - name: Collect APKs
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/release/*.apk out/
+          cp app/build/outputs/apk/debug/*.apk out/
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bitMessages-apks
+          path: out/*.apk
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/*-release.apk
+          generate_release_notes: true

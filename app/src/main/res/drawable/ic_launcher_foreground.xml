@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Lilac chat bubble with a toggle "bit" inside -->
+    <path android:fillColor="#EADDFF"
+        android:pathData="M34,32h40a10,10 0,0 1,10 10v20a10,10 0,0 1,-10 10H50l-12,10v-10h-4a10,10 0,0 1,-10 -10V42a10,10 0,0 1,10 -10z" />
+    <path android:fillColor="#21005D"
+        android:pathData="M44,45h20a7,7 0,0 1,0 14H44a7,7 0,0 1,0 -14z" />
+    <path android:fillColor="#EADDFF"
+        android:pathData="M64,47.5a4.5,4.5 0,1 1,0 9a4.5,4.5 0,1 1,0 -9z" />
+</vector>

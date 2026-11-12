@@ -1,0 +1,17 @@
+// Drop this folder into your bitDroid tree (e.g. packages/apps/bitMessages/)
+// together with bitMessages.apk from the latest GitHub release, then add
+//   PRODUCT_PACKAGES += bitMessages
+// to your product makefile. `overrides` removes AOSP Messaging so bitMessages
+// is the only SMS app on first boot. Also set config_defaultSms (see
+// overlay/config.xml) so the system picks it as the default SMS role holder.
+
+android_app_import {
+    name: "bitMessages",
+    apk: "bitMessages.apk",
+    presigned: true,
+    product_specific: true,
+    dex_preopt: {
+        enabled: true,
+    },
+    overrides: ["messaging", "Messaging"],
+}

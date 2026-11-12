@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Add to your device/vendor overlay of frameworks/base/core/res/res/values/config.xml
+     so bitMessages holds ROLE_SMS on first boot. -->
+<resources>
+    <string name="config_defaultSms" translatable="false">com.bitdroid.messages</string>
+</resources>

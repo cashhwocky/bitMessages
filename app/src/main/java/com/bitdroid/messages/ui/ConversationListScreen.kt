@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -99,6 +100,7 @@ fun ConversationListScreen(vm: AppViewModel) {
     val pinOrder by vm.pins.collectAsStateWithLifecycle()
     val swipeLeft by vm.swipeLeft.collectAsStateWithLifecycle()
     val swipeRight by vm.swipeRight.collectAsStateWithLifecycle()
+    val listStyle by vm.listStyle.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val view = LocalView.current
     var menuFor by remember { mutableStateOf<Conversation?>(null) }
@@ -148,7 +150,8 @@ fun ConversationListScreen(vm: AppViewModel) {
                     }
                 } else if (rest.isNotEmpty()) {
                     item(key = "label") { SectionRule(if (pinned.isEmpty()) "CHATS" else "ALL CHATS") }
-                    items(rest, key = { it.threadId }) { c ->
+                    itemsIndexed(rest, key = { _, it -> it.threadId }) { index, c ->
+                        val surface = rowSurface(listStyle, index == 0, index == rest.lastIndex)
                         SwipeRow(
                             left = swipeLeft,
                             right = swipeRight,
@@ -164,7 +167,9 @@ fun ConversationListScreen(vm: AppViewModel) {
                                 }
                             },
                         ) {
-                            ConversationRow(c, onClick = { vm.openThread(c.threadId) }, onLong = { openMenu(c) })
+                            Box(surface) {
+                                ConversationRow(c, onClick = { vm.openThread(c.threadId) }, onLong = { openMenu(c) })
+                            }
                         }
                     }
                 }
@@ -174,7 +179,7 @@ fun ConversationListScreen(vm: AppViewModel) {
         // Fade + floating dock: search pill and new chat.
         Box(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(150.dp)
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Bit.Black.copy(alpha = 0.92f), Bit.Black))),
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Bit.Black.copy(alpha = 0.7f), Bit.Black.copy(alpha = 0.85f)))),
         )
         Row(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().imePadding().navigationBarsPadding()
@@ -183,7 +188,7 @@ fun ConversationListScreen(vm: AppViewModel) {
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(
-                Modifier.weight(1f).height(62.dp).clip(CircleShape).background(Bit.Black)
+                Modifier.weight(1f).height(62.dp).clip(CircleShape).background(Bit.Black.copy(alpha = 0.55f))
                     .border(2.5.dp, Color.White, CircleShape).padding(start = 20.dp, end = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -206,7 +211,7 @@ fun ConversationListScreen(vm: AppViewModel) {
                 }
             }
             Box(
-                Modifier.size(62.dp).shadow(18.dp, CircleShape, ambientColor = Bit.Accent, spotColor = Bit.Accent)
+                Modifier.size(62.dp)
                     .clip(CircleShape).background(Bit.Accent)
                     .clickable {
                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -372,7 +377,6 @@ private fun Pin(c: Conversation, onOpen: (Conversation) -> Unit, onLong: (Conver
             Box(contentAlignment = Alignment.Center) {
                 Box(
                     Modifier.size(106.dp)
-                        .then(if (unread) Modifier.shadow(20.dp, CircleShape, ambientColor = Bit.Accent, spotColor = Bit.Accent) else Modifier)
                         .clip(CircleShape)
                         .background(if (unread) Bit.Accent else Bit.Raised),
                 )
@@ -454,7 +458,7 @@ private fun SwipeRow(
                 val bg = if (action == Prefs.Swipe.DELETE) Bit.ErrorContainer else Bit.Accent
                 val fg = if (action == Prefs.Swipe.DELETE) Color.White else Bit.OnAccent
                 Row(
-                    Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 3.dp).clip(RoundedCornerShape(26.dp)).background(bg).padding(horizontal = 26.dp),
+                    Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(26.dp)).background(bg).padding(horizontal = 26.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = if (dir == SwipeToDismissBoxValue.StartToEnd) Arrangement.Start else Arrangement.End,
                 ) {
@@ -465,7 +469,7 @@ private fun SwipeRow(
             }
         },
     ) {
-        Box(Modifier.background(Bit.Black)) { content() }
+        content()
     }
 }
 
@@ -474,7 +478,7 @@ private fun SwipeRow(
 private fun ConversationRow(c: Conversation, onClick: () -> Unit, onLong: () -> Unit) {
     val context = LocalContext.current
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 1.dp).clip(RoundedCornerShape(24.dp))
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLong)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -517,6 +521,23 @@ private fun ConversationRow(c: Conversation, onClick: () -> Unit, onLong: () -> 
                 }
             }
         }
+    }
+}
+
+/** Frosted panel: rows share one rounded translucent panel. Glass cards: each row its own card. */
+private fun rowSurface(style: Prefs.ListStyle, first: Boolean, last: Boolean): Modifier = when (style) {
+    Prefs.ListStyle.CARDS -> Modifier.padding(start = 10.dp, end = 10.dp, bottom = 8.dp)
+        .clip(RoundedCornerShape(24.dp))
+        .background(Color.White.copy(alpha = 0.045f))
+        .border(1.dp, Color.White.copy(alpha = 0.07f), RoundedCornerShape(24.dp))
+    Prefs.ListStyle.PANEL -> {
+        val r = 28.dp
+        val shape = RoundedCornerShape(
+            topStart = if (first) r else 0.dp, topEnd = if (first) r else 0.dp,
+            bottomStart = if (last) r else 0.dp, bottomEnd = if (last) r else 0.dp,
+        )
+        Modifier.padding(horizontal = 10.dp).clip(shape).background(Color.White.copy(alpha = 0.04f))
+            .padding(top = if (first) 4.dp else 0.dp, bottom = if (last) 4.dp else 0.dp)
     }
 }
 

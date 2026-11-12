@@ -72,6 +72,13 @@ object Prefs {
 
     // ------------------------------------------------------------- look
 
+    enum class ListStyle { PANEL, CARDS }
+
+    fun listStyle(context: Context): ListStyle =
+        runCatching { ListStyle.valueOf(get(context).getString("list_style", "PANEL")!!) }.getOrDefault(ListStyle.PANEL)
+
+    fun setListStyle(context: Context, s: ListStyle) = get(context).edit().putString("list_style", s.name).apply()
+
     /** Faint Material You (Monet) glow behind the black. Off by default. */
     fun monetBackground(context: Context): Boolean = get(context).getBoolean("monet_bg", false)
     fun setMonetBackground(context: Context, on: Boolean) = get(context).edit().putBoolean("monet_bg", on).apply()

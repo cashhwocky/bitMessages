@@ -298,6 +298,7 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
     var groupMms by remember { mutableStateOf(Prefs.groupMms(context)) }
     val sims by vm.sims.collectAsStateWithLifecycle()
     val monet by vm.monet.collectAsStateWithLifecycle()
+    val listStyle by vm.listStyle.collectAsStateWithLifecycle()
     val swipeLeft by vm.swipeLeft.collectAsStateWithLifecycle()
     val swipeRight by vm.swipeRight.collectAsStateWithLifecycle()
 
@@ -332,6 +333,27 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
                     view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                 }
             }
+            item {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) {
+                    Text("Chat list style", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(Prefs.ListStyle.PANEL to "FROSTED PANEL", Prefs.ListStyle.CARDS to "GLASS CARDS").forEach { (opt, label) ->
+                            val on = opt == listStyle
+                            Box(
+                                Modifier.height(40.dp).clip(CircleShape)
+                                    .then(if (on) Modifier.background(Bit.Accent) else Modifier.border(2.dp, Bit.OutlineSoft, CircleShape))
+                                    .clickable {
+                                        vm.setListStyle(opt)
+                                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                    }
+                                    .padding(horizontal = 16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) { Text(label, style = mono(11.5f, color = if (on) Bit.OnAccent else Color.White, spacing = 0.8f)) }
+                        }
+                    }
+                }
+            }
             item { SectionLabel("Swipe actions") }
             item {
                 Text(
@@ -359,7 +381,7 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
                 }
             }
             item { SectionLabel("About") }
-            item { SettingRow("bitMessages", "SMS and MMS for bitDroid · v0.2.0") {} }
+            item { SettingRow("bitMessages", "SMS and MMS for bitDroid · v0.2.1") {} }
         }
     }
 }

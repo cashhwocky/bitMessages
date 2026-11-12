@@ -403,7 +403,7 @@ private fun RunBlock(
         }
         val blockMod = when {
             failed -> Modifier.dashedBorder(2.dp, Bit.Error, 22.dp).clip(RoundedCornerShape(22.dp))
-            mine -> Modifier.shadow(16.dp, shape, ambientColor = Bit.Accent, spotColor = Bit.Accent).clip(shape).background(Bit.Accent)
+            mine -> Modifier.clip(shape).background(Bit.Accent)
             else -> Modifier.clip(shape).border(2.dp, Bit.Outline, shape)
         }
         Column(
@@ -568,7 +568,7 @@ private fun Composer(
 
     Column(
         Modifier.fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Color.Transparent, Bit.Black, Bit.Black)))
+            .background(Brush.verticalGradient(listOf(Color.Transparent, Bit.Black.copy(alpha = 0.75f), Bit.Black.copy(alpha = 0.85f))))
             .navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 12.dp),
     ) {
         AnimatedVisibility(images.isNotEmpty(), enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
@@ -648,7 +648,6 @@ private fun Composer(
 
             Box(
                 Modifier.padding(bottom = 0.dp).size(58.dp).scale(sendScale)
-                    .then(if (canSend) Modifier.shadow(18.dp, CircleShape, ambientColor = Bit.Accent, spotColor = Bit.Accent) else Modifier)
                     .clip(CircleShape).background(if (canSend) Bit.Accent else Bit.Raised)
                     .clickable(enabled = canSend, onClick = onSend),
                 contentAlignment = Alignment.Center,

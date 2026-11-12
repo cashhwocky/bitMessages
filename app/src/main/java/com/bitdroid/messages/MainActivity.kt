@@ -8,7 +8,16 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
+import androidx.activity.BackEventCompat
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -70,10 +79,34 @@ class MainActivity : ComponentActivity() {
                     if (!isDefault) {
                         SetupScreen(onSetDefault = ::requestRole, blocked = roleRefused.value)
                     } else {
-                        BackHandler(enabled = vm.stack.size > 1) { vm.back() }
+                        // Predictive back: the screen shrinks and follows your thumb; let go to go back.
+                        var backProgress by remember { mutableFloatStateOf(0f) }
+                        var backFromLeft by remember { mutableStateOf(true) }
+                        PredictiveBackHandler(enabled = vm.stack.size > 1) { events ->
+                            try {
+                                events.collect { e ->
+                                    backProgress = e.progress
+                                    backFromLeft = e.swipeEdge == BackEventCompat.EDGE_LEFT
+                                }
+                                backProgress = 0f
+                                vm.back()
+                            } catch (e: CancellationException) {
+                                backProgress = 0f
+                                throw e
+                            }
+                        }
                         val target = vm.stack.last()
                         val depth = vm.stack.size
                         AnimatedContent(
+                            modifier = Modifier.graphicsLayer {
+                                val p = backProgress
+                                val s = 1f - 0.1f * p
+                                scaleX = s
+                                scaleY = s
+                                translationX = (if (backFromLeft) 1f else -1f) * p * 32.dp.toPx()
+                                shape = RoundedCornerShape((36 * p).dp)
+                                clip = p > 0f
+                            },
                             targetState = target to depth,
                             transitionSpec = {
                                 val forward = targetState.second >= initialState.second

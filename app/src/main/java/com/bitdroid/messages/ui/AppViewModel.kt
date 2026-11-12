@@ -108,6 +108,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setSwipeRight(s: Prefs.Swipe) { Prefs.setSwipeRight(ctx, s); _swipeRight.value = s }
     fun setMonet(on: Boolean) { Prefs.setMonetBackground(ctx, on); _monet.value = on }
 
+    private val _listStyle = MutableStateFlow(Prefs.listStyle(app))
+    val listStyle: StateFlow<Prefs.ListStyle> = _listStyle
+    fun setListStyle(s: Prefs.ListStyle) { Prefs.setListStyle(ctx, s); _listStyle.value = s }
+
     /** Unsent text per thread, and a shared-in draft for the next opened thread. */
     val drafts = mutableStateMapOf<Long, Draft>()
     var pendingShare: Draft? = null

@@ -27,7 +27,8 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.BitMessages">
+        android:theme="@style/Theme.BitMessages"
+        android:enableOnBackInvokedCallback="true">
 
         <!-- Main UI. Also handles SEND/SENDTO for sms:, smsto:, mms:, mmsto: (required for ROLE_SMS). -->
         <activity

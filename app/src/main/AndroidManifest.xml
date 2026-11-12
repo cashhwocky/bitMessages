@@ -20,13 +20,6 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- Lets the RCS checklist see whether Google Messages / Carrier Services are installed. -->
-    <queries>
-        <package android:name="com.google.android.apps.messaging" />
-        <package android:name="com.google.android.ims" />
-        <package android:name="com.android.vending" />
-    </queries>
-
     <application
         android:name=".BitMessagesApp"
         android:allowBackup="false"

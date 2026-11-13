@@ -76,7 +76,7 @@ val Display: FontFamily = variable(R.font.unbounded, 600, 700, 800, 900)
 val Mono: FontFamily = variable(R.font.jetbrains_mono, 500, 700)
 
 /** Body text. */
-val Body: FontFamily = variable(R.font.inter, 400, 500, 600, 700, 800)
+val Body: FontFamily = variable(R.font.inter, 300, 400, 500, 600, 700, 800)
 
 private fun scheme() = darkColorScheme(
     primary = Bit.Accent,

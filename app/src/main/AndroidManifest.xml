@@ -23,8 +23,8 @@
     <application
         android:name=".BitMessagesApp"
         android:allowBackup="false"
-        android:icon="@mipmap/ic_launcher_white"
-        android:roundIcon="@mipmap/ic_launcher_white"
+        android:icon="@mipmap/ic_launcher_you"
+        android:roundIcon="@mipmap/ic_launcher_you"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.BitMessages"
@@ -60,13 +60,13 @@
             </intent-filter>
         </activity>
 
-        <!-- Launcher icons (pick one in Settings → App icon). White is the default. -->
+        <!-- Launcher icons (pick one in Settings → App icon). The Material You icon is the default. -->
         <activity-alias
             android:name=".IconWhite"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_white"
-            android:roundIcon="@mipmap/ic_launcher_white"
+            android:icon="@mipmap/ic_launcher_you"
+            android:roundIcon="@mipmap/ic_launcher_you"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -115,7 +115,7 @@
 
         <activity-alias
             android:name=".IconYou"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_you"
             android:roundIcon="@mipmap/ic_launcher_you"

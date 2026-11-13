@@ -22,7 +22,7 @@ import com.bitdroid.messages.R
 
 object Bit {
     /** Current theme colors; a snapshot state, so changing it recolors the whole app live. */
-    var palette by mutableStateOf(Themes.AMOLED)
+    var palette by mutableStateOf(Themes.BITHOME)
 
     /** Loads the saved theme (Material You colors come from the wallpaper). */
     fun apply(context: android.content.Context) {
@@ -155,11 +155,11 @@ object Themes {
     data class Choice(val key: String, val label: String)
 
     val all = listOf(
+        Choice("bithome", "BITHOME"),
         Choice("amoled", "AMOLED"),
         Choice("lilac", "LILAC"),
         Choice("mint", "MINT"),
         Choice("you", "MATERIAL YOU"),
-        Choice("bithome", "BITHOME"),
     )
 
     private fun black(accent: Long, onAccent: Long) = Palette(
@@ -183,7 +183,7 @@ object Themes {
     )
 
     fun current(context: android.content.Context): String =
-        com.bitdroid.messages.data.Prefs.get(context).getString("app_theme", "amoled") ?: "amoled"
+        com.bitdroid.messages.data.Prefs.get(context).getString("app_theme", "bithome") ?: "bithome"
 
     fun set(context: android.content.Context, key: String) {
         com.bitdroid.messages.data.Prefs.get(context).edit().putString("app_theme", key).apply()

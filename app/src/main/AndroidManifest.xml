@@ -113,6 +113,19 @@
             </intent-filter>
         </activity-alias>
 
+        <activity-alias
+            android:name=".IconYou"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_you"
+            android:roundIcon="@mipmap/ic_launcher_you"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- SMS_DELIVER: only delivered to the default SMS app. -->
         <receiver
             android:name=".sms.SmsDeliverReceiver"

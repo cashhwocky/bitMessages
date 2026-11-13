@@ -1,5 +1,8 @@
 package com.bitdroid.messages.ui
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.background
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
@@ -47,7 +50,7 @@ fun IconPicker() {
         Text("App icon", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         Text("Your home screen may take a moment to update", color = Bit.TextDim, fontSize = 14.sp)
         Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             AppIcons.all.forEach { c ->
                 val on = c.key == current
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -62,7 +65,18 @@ fun IconPicker() {
                                     current = c.key
                                 }
                             },
-                    ) { IconPreview(Color(c.bg), c.fgDark) }
+                    ) {
+                        val art = c.art
+                        if (art != null) {
+                            androidx.compose.foundation.Image(
+                                androidx.compose.ui.res.painterResource(art), null,
+                                Modifier.fillMaxSize().background(Color(c.bg))
+                                    .graphicsLayer { scaleX = 108f / 66f; scaleY = 108f / 66f },
+                            )
+                        } else {
+                            IconPreview(Color(c.bg), c.fgDark)
+                        }
+                    }
                     Spacer(Modifier.height(6.dp))
                     Text(c.label, style = mono(10f, color = if (on) Bit.Accent else Bit.TextDim, spacing = 0.8f))
                 }

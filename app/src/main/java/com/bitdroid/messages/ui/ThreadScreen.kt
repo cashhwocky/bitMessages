@@ -54,6 +54,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Close
@@ -225,7 +226,41 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
                 },
                 SelectAction("Delete", Icons.Rounded.Delete, Bit.Error) { confirmMsgDelete = true },
             ),
-        ) else Row(
+        ) else if (Bit.expressive) Row(
+            Modifier.fillMaxWidth().statusBarsPadding().padding(start = 10.dp, end = 12.dp, top = 8.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(50.dp).clip(CircleShape).background(Bit.Tile).clickable { vm.back() },
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(22.dp)) }
+            Spacer(Modifier.width(8.dp))
+            Box(Modifier.weight(1f)) {
+                Row(
+                    Modifier.fillMaxWidth().clip(CircleShape).background(Bit.Tile)
+                        .clickable { menu = true; vm.loadBlocked() }.padding(start = 6.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Avatar(state.recipients, 50.dp, shape = Shapes.Ripple)
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(title, fontFamily = Body, fontWeight = FontWeight.ExtraBold, fontSize = 19.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (subtitle.isNotBlank()) Text(subtitle, color = Bit.TextDim, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Icon(Icons.Rounded.MoreVert, "Menu", tint = Bit.TextDim, modifier = Modifier.size(20.dp))
+                }
+                ThreadMenu(menu, { menu = false }, pinned, blocked, isGroup, state.recipients, threadId, vm, onDelete = { confirmDelete = true })
+            }
+            if (!isGroup && state.recipients.size == 1 && !Phone.isEmail(state.recipients[0].address)) {
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    Modifier.size(58.dp).clip(Shapes.Clover).background(Bit.Light).clickable {
+                        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", state.recipients[0].address, null)))
+                    },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Rounded.Call, "Call", tint = Bit.OnAccent, modifier = Modifier.size(22.dp)) }
+            }
+        } else Row(
             Modifier.fillMaxWidth().statusBarsPadding().padding(start = 6.dp, end = 12.dp, top = 6.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -249,24 +284,10 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
             }
             Box {
                 OutlinedCircle(onClick = { menu = true; vm.loadBlocked() }) { Icon(Icons.Rounded.MoreVert, "Menu", tint = Color.White, modifier = Modifier.size(20.dp)) }
-                DropdownMenu(menu, { menu = false }, containerColor = Bit.SurfaceHigh) {
-                    DropdownMenuItem(text = { Text(if (pinned) "Unpin" else "Pin") }, onClick = {
-                        menu = false
-                        if (!vm.togglePin(threadId)) Toast.makeText(context, "You can pin up to 6 chats", Toast.LENGTH_SHORT).show()
-                    })
-                    if (blocked) {
-                        DropdownMenuItem(text = { Text("Unblock") }, onClick = { menu = false; state.recipients.forEach { vm.unblock(it.address) } })
-                    } else {
-                        DropdownMenuItem(text = { Text(if (isGroup) "Block everyone" else "Block") }, onClick = { menu = false; vm.block(state.recipients.map { it.address }) })
-                    }
-                    state.recipients.singleOrNull()?.lookupUri?.let { lookup ->
-                        DropdownMenuItem(text = { Text("View contact") }, onClick = { menu = false; context.startActivity(Intent(Intent.ACTION_VIEW, lookup)) })
-                    }
-                    DropdownMenuItem(text = { Text("Delete chat", color = Bit.Error) }, onClick = { menu = false; confirmDelete = true })
-                }
+                ThreadMenu(menu, { menu = false }, pinned, blocked, isGroup, state.recipients, threadId, vm, onDelete = { confirmDelete = true })
             }
         }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(Bit.Hairline))
+        if (!Bit.expressive) Box(Modifier.fillMaxWidth().height(1.dp).background(Bit.Hairline))
 
         // --------------------------------------------------------- messages
         Box(Modifier.weight(1f)) {
@@ -374,6 +395,36 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
 }
 
 @Composable
+private fun ThreadMenu(
+    open: Boolean,
+    onDismiss: () -> Unit,
+    pinned: Boolean,
+    blocked: Boolean,
+    isGroup: Boolean,
+    recipients: List<Contact>,
+    threadId: Long,
+    vm: AppViewModel,
+    onDelete: () -> Unit,
+) {
+    val context = LocalContext.current
+    DropdownMenu(open, onDismiss, containerColor = Bit.SurfaceHigh) {
+        DropdownMenuItem(text = { Text(if (pinned) "Unpin" else "Pin") }, onClick = {
+            onDismiss()
+            if (!vm.togglePin(threadId)) Toast.makeText(context, "You can pin up to 6 chats", Toast.LENGTH_SHORT).show()
+        })
+        if (blocked) {
+            DropdownMenuItem(text = { Text("Unblock") }, onClick = { onDismiss(); recipients.forEach { vm.unblock(it.address) } })
+        } else {
+            DropdownMenuItem(text = { Text(if (isGroup) "Block everyone" else "Block") }, onClick = { onDismiss(); vm.block(recipients.map { it.address }) })
+        }
+        recipients.singleOrNull()?.lookupUri?.let { lookup ->
+            DropdownMenuItem(text = { Text("View contact") }, onClick = { onDismiss(); context.startActivity(Intent(Intent.ACTION_VIEW, lookup)) })
+        }
+        DropdownMenuItem(text = { Text("Delete chat", color = Bit.Error) }, onClick = { onDismiss(); onDelete() })
+    }
+}
+
+@Composable
 private fun OutlinedCircle(onClick: () -> Unit, size: Dp = 44.dp, content: @Composable () -> Unit) {
     Box(
         Modifier.size(size).clip(CircleShape).border(2.dp, Bit.OutlineSoft, CircleShape).clickable(onClick = onClick),
@@ -383,6 +434,19 @@ private fun OutlinedCircle(onClick: () -> Unit, size: Dp = 44.dp, content: @Comp
 
 @Composable
 private fun DayRule(label: String) {
+    if (Bit.expressive) {
+        Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+            Row(
+                Modifier.clip(CircleShape).background(Bit.Pink).padding(start = 6.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(24.dp).clip(Shapes.Sunny).background(Bit.PinkText))
+                Spacer(Modifier.width(8.dp))
+                Text(label, color = Bit.PinkText, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+            }
+        }
+        return
+    }
     Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.weight(1f).height(1.dp).background(Bit.Hairline))
         Text(label.uppercase(), style = mono(11f, spacing = 1.2f), modifier = Modifier.padding(horizontal = 10.dp))
@@ -443,6 +507,10 @@ private fun RunBlock(
                 modifier = Modifier.padding(start = 10.dp, bottom = 5.dp),
             )
         }
+        if (Bit.expressive) {
+            HomeRun(run, mine, failed, onImage, onRetry, onDownload, onCopy, onDelete, sel)
+            return@Column
+        }
         val blockMod = when {
             failed -> Modifier.dashedBorder(2.dp, Bit.Error, 22.dp).clip(RoundedCornerShape(22.dp))
             mine -> Modifier.clip(shape).background(Bit.Accent)
@@ -486,6 +554,71 @@ private fun RunBlock(
                 Icon(Icons.Rounded.Refresh, null, tint = Bit.Error, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("NOT SENT · TAP TO RETRY", style = mono(10.5f, color = Bit.Error))
+            }
+        }
+    }
+}
+
+/** bitHome: each message is its own bubble. Theirs are purple-gray tiles, yours lavender pills, the newest one lighter. */
+@Composable
+private fun HomeRun(
+    run: ChatItem.Run,
+    mine: Boolean,
+    failed: Boolean,
+    onImage: (Uri) -> Unit,
+    onRetry: (Message) -> Unit,
+    onDownload: (Message) -> Unit,
+    onCopy: (Message) -> Unit,
+    onDelete: (Message) -> Unit,
+    sel: Selection<String>,
+) {
+    val context = LocalContext.current
+    Column(horizontalAlignment = if (mine) Alignment.End else Alignment.Start, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        run.messages.forEachIndexed { i, m ->
+            val last = i == run.messages.lastIndex
+            val shape = when {
+                mine && last -> RoundedCornerShape(26.dp, 26.dp, 8.dp, 26.dp)
+                mine -> RoundedCornerShape(26.dp)
+                last -> RoundedCornerShape(24.dp, 24.dp, 24.dp, 8.dp)
+                else -> RoundedCornerShape(24.dp)
+            }
+            val bad = m.status == MessageStatus.FAILED
+            val bg = when {
+                bad -> Color.Transparent
+                mine && last -> Bit.Light
+                mine -> Bit.Accent
+                else -> Bit.Tile
+            }
+            Box(
+                Modifier.widthIn(max = 290.dp)
+                    .then(if (bad) Modifier.dashedBorder(2.dp, Bit.Error, 22.dp) else Modifier)
+                    .clip(shape).background(bg).width(IntrinsicSize.Max),
+            ) {
+                Segment(m, if (mine && !bad) Bit.OnAccent else Color.White, first = true, onImage, onRetry, onDownload, onCopy, onDelete, sel)
+            }
+        }
+        val last = run.last
+        val status = when {
+            !mine || failed -> null
+            last.status == MessageStatus.SENDING -> "Sending…"
+            last.status == MessageStatus.DELIVERED -> "Delivered"
+            else -> "Sent"
+        }
+        Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(shortClock(context, last.date), color = Bit.TextDim, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+            if (status != null) {
+                Text(" · $status", color = Bit.PinkText, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        if (failed) {
+            Row(
+                Modifier.clip(CircleShape).clickable { run.messages.filter { it.status == MessageStatus.FAILED }.forEach(onRetry) }
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Rounded.Refresh, null, tint = Bit.Error, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Not sent · tap to retry", color = Bit.Error, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -620,7 +753,10 @@ private fun Composer(
 
     Column(
         Modifier.fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Color.Transparent, Bit.Black.copy(alpha = 0.75f), Bit.Black.copy(alpha = 0.85f))))
+            .background(
+                if (Bit.expressive) Brush.verticalGradient(listOf(Color.Transparent, Color(0xFF0F1419).copy(alpha = 0.6f)))
+                else Brush.verticalGradient(listOf(Color.Transparent, Bit.Black.copy(alpha = 0.75f), Bit.Black.copy(alpha = 0.85f))),
+            )
             .navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 12.dp),
     ) {
         AnimatedVisibility(images.isNotEmpty(), enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
@@ -644,14 +780,21 @@ private fun Composer(
             }
         }
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val ex = Bit.expressive
             Box(
-                Modifier.padding(bottom = 3.dp).size(52.dp).clip(CircleShape).border(2.dp, Bit.OutlineSoft, CircleShape).clickable(onClick = onAttach),
+                Modifier.padding(bottom = 3.dp).size(52.dp)
+                    .then(if (ex) Modifier.clip(Shapes.Gem).background(Bit.Tile) else Modifier.clip(CircleShape).border(2.dp, Bit.OutlineSoft, CircleShape))
+                    .clickable(onClick = onAttach),
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Rounded.Image, "Attach picture", tint = Bit.Accent, modifier = Modifier.size(22.dp)) }
+            ) {
+                if (ex) Icon(Icons.Rounded.Add, "Attach picture", tint = Color.White, modifier = Modifier.size(24.dp))
+                else Icon(Icons.Rounded.Image, "Attach picture", tint = Bit.Accent, modifier = Modifier.size(22.dp))
+            }
 
             Row(
                 Modifier.weight(1f).heightIn(min = 58.dp).clip(RoundedCornerShape(29.dp))
-                    .border(2.5.dp, Color.White, RoundedCornerShape(29.dp)).padding(start = 18.dp, end = 8.dp),
+                    .then(if (ex) Modifier.background(Color(0xFF463E60)).border(2.5.dp, Bit.Accent.copy(alpha = 0.55f), RoundedCornerShape(29.dp)) else Modifier.border(2.5.dp, Color.White, RoundedCornerShape(29.dp)))
+                    .padding(start = 18.dp, end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(Modifier.weight(1f).padding(vertical = 16.dp)) {
@@ -700,10 +843,15 @@ private fun Composer(
 
             Box(
                 Modifier.padding(bottom = 0.dp).size(58.dp).scale(sendScale)
-                    .clip(CircleShape).background(if (canSend) Bit.Accent else Bit.Raised)
+                    .clip(if (ex) Shapes.Triangle else CircleShape).background(if (canSend) Bit.Accent else Bit.Raised)
                     .clickable(enabled = canSend, onClick = onSend),
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Rounded.ArrowUpward, "Send", tint = if (canSend) Bit.OnAccent else Bit.TextDim, modifier = Modifier.size(25.dp)) }
+            ) {
+                Icon(
+                    Icons.Rounded.ArrowUpward, "Send", tint = if (canSend) Bit.OnAccent else Bit.TextDim,
+                    modifier = Modifier.padding(top = if (ex) 8.dp else 0.dp).size(if (ex) 23.dp else 25.dp),
+                )
+            }
         }
     }
 }

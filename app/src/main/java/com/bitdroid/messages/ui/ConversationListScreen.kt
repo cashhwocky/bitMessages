@@ -46,6 +46,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Done
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
@@ -112,7 +113,13 @@ fun ConversationListScreen(vm: AppViewModel) {
 
     val byId = remember(conversations) { conversations.associateBy { it.threadId } }
     val pinned = remember(pinOrder, conversations) { pinOrder.mapNotNull { byId[it] } }
-    val rest = remember(pinOrder, conversations) { conversations.filter { it.threadId !in pinOrder } }
+    val expressive = Bit.expressive
+    // bitHome: unread chats float to the top as their own pink pills.
+    val rest = remember(pinOrder, conversations, expressive) {
+        val r = conversations.filter { it.threadId !in pinOrder }
+        if (expressive) r.filter { it.unread } + r.filterNot { it.unread } else r
+    }
+    val firstRead = rest.indexOfFirst { !it.unread }
     val unreadTotal = conversations.count { it.unread }
 
     val titleMatches = remember(query, conversations) {
@@ -153,7 +160,8 @@ fun ConversationListScreen(vm: AppViewModel) {
                         ),
                     )
                 } else {
-                    Header(vm, unreadTotal, conversations.size, onSelect = { sel.start() })
+                    if (Bit.expressive) HomeHeader(vm, unreadTotal, conversations.size, onSelect = { sel.start() })
+                    else Header(vm, unreadTotal, conversations.size, onSelect = { sel.start() })
                 }
             }
 
@@ -178,9 +186,15 @@ fun ConversationListScreen(vm: AppViewModel) {
                         }
                     }
                 } else if (rest.isNotEmpty()) {
-                    item(key = "label") { SectionRule(if (pinned.isEmpty()) "CHATS" else "ALL CHATS") }
+                    if (!expressive) item(key = "label") { SectionRule(if (pinned.isEmpty()) "CHATS" else "ALL CHATS") }
+                    else item(key = "gap") { Spacer(Modifier.height(14.dp)) }
                     itemsIndexed(rest, key = { _, it -> it.threadId }) { index, c ->
-                        val surface = rowSurface(listStyle, index == 0, index == rest.lastIndex)
+                        val pink = expressive && c.unread
+                        val surface = when {
+                            pink -> Modifier.padding(start = 14.dp, end = 14.dp, bottom = 10.dp).clip(CircleShape).background(Bit.Pink)
+                            expressive -> homePanel(index == firstRead, index == rest.lastIndex)
+                            else -> rowSurface(listStyle, index == 0, index == rest.lastIndex)
+                        }
                         SwipeRow(
                             left = if (sel.active) Prefs.Swipe.NONE else swipeLeft,
                             right = if (sel.active) Prefs.Swipe.NONE else swipeRight,
@@ -199,6 +213,7 @@ fun ConversationListScreen(vm: AppViewModel) {
                             Box(surface) {
                                 ConversationRow(
                                     c,
+                                    pink = pink,
                                     selectMode = sel.active,
                                     selected = c.threadId in sel,
                                     onClick = {
@@ -219,9 +234,10 @@ fun ConversationListScreen(vm: AppViewModel) {
         }
 
         // Fade + floating dock: search pill and new chat.
+        val fadeTo = if (expressive) Color(0xFF0F1419) else Bit.Black
         Box(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(150.dp)
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Bit.Black.copy(alpha = 0.7f), Bit.Black.copy(alpha = 0.85f)))),
+                .background(Brush.verticalGradient(listOf(Color.Transparent, fadeTo.copy(alpha = 0.7f), fadeTo.copy(alpha = 0.85f)))),
         )
         Row(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().imePadding().navigationBarsPadding()
@@ -230,14 +246,29 @@ fun ConversationListScreen(vm: AppViewModel) {
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(
-                Modifier.weight(1f).height(62.dp).clip(CircleShape).background(Bit.Black.copy(alpha = 0.55f))
-                    .border(2.5.dp, Color.White, CircleShape).padding(start = 20.dp, end = 6.dp),
+                if (expressive) {
+                    Modifier.weight(1f).height(62.dp).clip(CircleShape).background(Color(0xFF463E60))
+                        .border(2.5.dp, Bit.Accent.copy(alpha = 0.55f), CircleShape).padding(start = 7.dp, end = 6.dp)
+                } else {
+                    Modifier.weight(1f).height(62.dp).clip(CircleShape).background(Bit.Black.copy(alpha = 0.55f))
+                        .border(2.5.dp, Color.White, CircleShape).padding(start = 20.dp, end = 6.dp)
+                },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Rounded.Search, null, tint = Color.White, modifier = Modifier.size(24.dp))
-                Spacer(Modifier.width(12.dp))
+                if (expressive) {
+                    Box(Modifier.size(46.dp).clip(CircleShape).background(Bit.Accent), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.Search, null, tint = Bit.OnAccent, modifier = Modifier.size(24.dp))
+                    }
+                    Spacer(Modifier.width(14.dp))
+                } else {
+                    Icon(Icons.Rounded.Search, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(12.dp))
+                }
                 Box(Modifier.weight(1f)) {
-                    if (query.isEmpty()) Text("Search", color = Bit.TextDim, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    if (query.isEmpty()) {
+                        if (expressive) Text("Search chats", color = Color(0xFFEDE6FF), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                        else Text("Search", color = Bit.TextDim, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    }
                     BasicTextField(
                         value = query,
                         onValueChange = vm::setQuery,
@@ -253,15 +284,16 @@ fun ConversationListScreen(vm: AppViewModel) {
                 }
             }
             Box(
-                Modifier.size(62.dp)
-                    .clip(CircleShape).background(Bit.Accent)
+                Modifier.size(if (expressive) 70.dp else 62.dp)
+                    .clip(if (expressive) Shapes.Ripple7 else CircleShape).background(if (expressive) Bit.Light else Bit.Accent)
                     .clickable {
                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                         vm.push(Screen.NewChat)
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Rounded.Add, "Start chat", tint = Bit.OnAccent, modifier = Modifier.size(30.dp))
+                if (expressive) Icon(Icons.Rounded.Edit, "Start chat", tint = Bit.OnAccent, modifier = Modifier.size(28.dp))
+                else Icon(Icons.Rounded.Add, "Start chat", tint = Bit.OnAccent, modifier = Modifier.size(30.dp))
             }
         }
 
@@ -329,20 +361,48 @@ fun ConversationListScreen(vm: AppViewModel) {
     }
 }
 
+/** bitHome header: a big title tile and a ripple badge with the unread count, like the clock widget. */
 @Composable
-private fun Header(vm: AppViewModel, unread: Int, chats: Int, onSelect: () -> Unit) {
-    var menu by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().statusBarsPadding()) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = 22.dp, end = 16.dp, top = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+private fun HomeHeader(vm: AppViewModel, unread: Int, chats: Int, onSelect: () -> Unit) {
+    val today = remember { java.text.SimpleDateFormat("EEEE", java.util.Locale.getDefault()).format(java.util.Date()) }
+    Row(
+        Modifier.fillMaxWidth().statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 12.dp).height(134.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.weight(1f).fillMaxSize().clip(RoundedCornerShape(40.dp, 40.dp, 40.dp, 14.dp)).background(Bit.Tile)
+                .padding(start = 22.dp, end = 10.dp, top = 12.dp, bottom = 18.dp),
         ) {
-            ToggleMark()
-            Spacer(Modifier.width(10.dp))
-            Text("BITMESSAGES", style = mono(12f, color = Bit.Accent, spacing = 1.6f), modifier = Modifier.weight(1f))
+            Text(
+                buildAnnotatedString {
+                    pushStyle(SpanStyle(fontWeight = FontWeight.Light)); append("Mess"); pop()
+                    pushStyle(SpanStyle(fontWeight = FontWeight.ExtraBold)); append("ages"); pop()
+                },
+                fontFamily = Body, fontSize = 40.sp, letterSpacing = (-1.5).sp, lineHeight = 44.sp,
+                modifier = Modifier.align(Alignment.CenterStart).padding(bottom = 18.dp),
+            )
+            Text(
+                "$today · $chats chats", color = Bit.TextDim, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.align(Alignment.BottomStart),
+            )
+            Box(Modifier.align(Alignment.TopEnd)) { HeaderMenu(vm, onSelect, Color.Transparent) }
+        }
+        Spacer(Modifier.width(8.dp))
+        Box(Modifier.size(122.dp).clip(Shapes.Sunny).background(Bit.Accent), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(if (unread > 99) "99+" else "$unread", color = Bit.OnAccent, fontFamily = Body, fontWeight = FontWeight.ExtraBold, fontSize = 40.sp, lineHeight = 42.sp)
+                Text("NEW", color = Bit.OnAccent, fontFamily = Body, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 2.5.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeaderMenu(vm: AppViewModel, onSelect: () -> Unit, ring: Color = Bit.OutlineSoft) {
+    var menu by remember { mutableStateOf(false) }
             Box {
                 Box(
-                    Modifier.size(44.dp).clip(CircleShape).border(2.dp, Bit.OutlineSoft, CircleShape).clickable { menu = true },
+                    Modifier.size(44.dp).clip(CircleShape).border(2.dp, ring, CircleShape).clickable { menu = true },
                     contentAlignment = Alignment.Center,
                 ) { MenuGlyph() }
                 DropdownMenu(menu, { menu = false }, containerColor = Bit.SurfaceHigh) {
@@ -365,6 +425,19 @@ private fun Header(vm: AppViewModel, unread: Int, chats: Int, onSelect: () -> Un
                     })
                 }
             }
+}
+
+@Composable
+private fun Header(vm: AppViewModel, unread: Int, chats: Int, onSelect: () -> Unit) {
+    Column(Modifier.fillMaxWidth().statusBarsPadding()) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 22.dp, end = 16.dp, top = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ToggleMark()
+            Spacer(Modifier.width(10.dp))
+            Text("BITMESSAGES", style = mono(12f, color = Bit.Accent, spacing = 1.6f), modifier = Modifier.weight(1f))
+            HeaderMenu(vm, onSelect)
         }
         Text(
             "Messages",
@@ -414,13 +487,16 @@ fun SectionRule(label: String) {
 @Composable
 private fun PinGrid(pins: List<Conversation>, sel: Selection<Long>, onOpen: (Conversation) -> Unit, onLong: (Conversation) -> Unit) {
     Column(
-        Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 30.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp),
+        Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = if (Bit.expressive) 20.dp else 30.dp),
+        verticalArrangement = Arrangement.spacedBy(if (Bit.expressive) 16.dp else 28.dp),
     ) {
-        pins.chunked(3).forEach { row ->
+        pins.chunked(3).forEachIndexed { r, row ->
             Row(Modifier.fillMaxWidth()) {
-                row.forEach { c ->
-                    Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) { Pin(c, sel.active, c.threadId in sel, onOpen, onLong) }
+                row.forEachIndexed { i, c ->
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) {
+                        if (Bit.expressive) HomePin(c, pinShapes[(r * 3 + i) % pinShapes.size], sel.active, c.threadId in sel, onOpen, onLong)
+                        else Pin(c, sel.active, c.threadId in sel, onOpen, onLong)
+                    }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
@@ -488,6 +564,43 @@ private fun Pin(c: Conversation, selectMode: Boolean, selected: Boolean, onOpen:
     }
 }
 
+/** bitHome pins: only ripples, circles and clovers. */
+private val pinShapes = listOf(Shapes.Ripple, Shapes.Circle, Shapes.Circle, Shapes.Clover, Shapes.Ripple, Shapes.Circle)
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun HomePin(
+    c: Conversation,
+    shape: androidx.compose.ui.graphics.Shape,
+    selectMode: Boolean,
+    selected: Boolean,
+    onOpen: (Conversation) -> Unit,
+    onLong: (Conversation) -> Unit,
+) {
+    val pop = remember(c.threadId) { Animatable(0.6f) }
+    LaunchedEffect(c.threadId) { pop.animateTo(1f, Bit.bouncy) }
+    Column(
+        Modifier
+            .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
+            .clip(RoundedCornerShape(24.dp))
+            .combinedClickable(onClick = { onOpen(c) }, onLongClick = { onLong(c) })
+            .padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box {
+            Avatar(c.recipients, 90.dp, shape = shape)
+            if (c.unread) Box(Modifier.align(Alignment.TopEnd).offset(x = 2.dp, y = (-2).dp).size(24.dp).clip(Shapes.Sunny).background(Color(0xFFF28FB5)))
+            if (selectMode) SelectDot(selected, Modifier.align(Alignment.BottomEnd))
+        }
+        Spacer(Modifier.height(7.dp))
+        Text(
+            c.recipients.singleOrNull()?.name ?: c.title,
+            fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 108.dp),
+        )
+    }
+}
+
 // ------------------------------------------------------------------ rows
 
 @Composable
@@ -545,30 +658,32 @@ private fun SwipeRow(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ConversationRow(c: Conversation, selectMode: Boolean, selected: Boolean, onClick: () -> Unit, onLong: () -> Unit) {
+private fun ConversationRow(c: Conversation, pink: Boolean = false, selectMode: Boolean, selected: Boolean, onClick: () -> Unit, onLong: () -> Unit) {
     val context = LocalContext.current
+    val ink = if (pink) Bit.PinkText else Color.White
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+        Modifier.fillMaxWidth().clip(if (pink) CircleShape else RoundedCornerShape(24.dp))
             .background(if (selected) Bit.Accent.copy(alpha = 0.16f) else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLong)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box {
-            Avatar(c.recipients, 54.dp)
+            Avatar(c.recipients, if (Bit.expressive) 52.dp else 54.dp, shape = if (pink) Shapes.Ripple7 else Shapes.Circle)
             if (selectMode) SelectDot(selected, Modifier.align(Alignment.BottomEnd).offset(x = 4.dp, y = 4.dp))
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    c.title, fontSize = 17.5.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.3).sp,
+                    c.title, color = ink, fontSize = 17.5.sp, fontWeight = if (Bit.expressive && !c.unread) FontWeight.SemiBold else FontWeight.ExtraBold, letterSpacing = (-0.3).sp,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     shortTime(context, c.date).uppercase(),
-                    style = mono(11.5f, if (c.unread) FontWeight.Bold else FontWeight.Medium, if (c.unread) Bit.Accent else Bit.TextDim, 0.4f),
+                    style = if (Bit.expressive) TextStyle(fontFamily = Body, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (pink) Bit.PinkText else Bit.TextDim)
+                    else mono(11.5f, if (c.unread) FontWeight.Bold else FontWeight.Medium, if (c.unread) Bit.Accent else Bit.TextDim, 0.4f),
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -579,23 +694,38 @@ private fun ConversationRow(c: Conversation, selectMode: Boolean, selected: Bool
                 }
                 Text(
                     if (c.hasError) "Not sent" else c.snippet,
-                    color = if (c.hasError) Bit.Error else if (c.unread) Color.White else Bit.TextDim,
+                    color = if (c.hasError) Bit.Error else if (pink) Bit.PinkText.copy(alpha = 0.85f) else if (c.unread) Color.White else Bit.TextDim,
                     fontSize = 14.5.sp, fontWeight = if (c.unread) FontWeight.SemiBold else FontWeight.Normal,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                 )
                 if (c.unread) {
                     Spacer(Modifier.width(8.dp))
                     Box(
-                        Modifier.defaultMinSize(minWidth = 22.dp, minHeight = 22.dp).clip(CircleShape).background(Bit.Accent).padding(horizontal = 7.dp),
+                        Modifier.defaultMinSize(minWidth = if (pink) 28.dp else 22.dp, minHeight = if (pink) 28.dp else 22.dp).clip(CircleShape)
+                            .background(if (pink) Bit.PinkText else Bit.Accent).padding(horizontal = 7.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         val n = maxOf(1, c.unreadCount)
-                        Text(if (n > 99) "99+" else "$n", style = mono(11.5f, color = Bit.OnAccent, spacing = 0f))
+                        Text(
+                            if (n > 99) "99+" else "$n",
+                            style = if (pink) TextStyle(fontFamily = Body, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4A1E3E))
+                            else mono(11.5f, color = Bit.OnAccent, spacing = 0f),
+                        )
                     }
                 }
             }
         }
     }
+}
+
+/** bitHome: read chats share one purple-gray tile with one tucked-in corner. */
+private fun homePanel(first: Boolean, last: Boolean): Modifier {
+    val shape = RoundedCornerShape(
+        topStart = if (first) 14.dp else 0.dp, topEnd = if (first) 34.dp else 0.dp,
+        bottomStart = if (last) 34.dp else 0.dp, bottomEnd = if (last) 34.dp else 0.dp,
+    )
+    return Modifier.padding(horizontal = 14.dp).clip(shape).background(Bit.Tile)
+        .padding(top = if (first) 4.dp else 0.dp, bottom = if (last) 4.dp else 0.dp)
 }
 
 /** Frosted panel: rows share one rounded translucent panel. Glass cards: each row its own card. */

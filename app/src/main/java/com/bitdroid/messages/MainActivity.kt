@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bitdroid.messages.ui.AppViewModel
 import com.bitdroid.messages.ui.Bit
 import com.bitdroid.messages.ui.BitTheme
+import com.bitdroid.messages.ui.backdrop
 import com.bitdroid.messages.ui.BlockedScreen
 import com.bitdroid.messages.ui.ConversationListScreen
 import com.bitdroid.messages.ui.Draft
@@ -76,7 +77,7 @@ class MainActivity : ComponentActivity() {
             BitTheme {
                 val isDefault by vm.isDefault.collectAsStateWithLifecycle()
                 val monet by vm.monet.collectAsStateWithLifecycle()
-                Box(Modifier.fillMaxSize().background(Bit.Black).monetGlow(monet)) {
+                Box(Modifier.fillMaxSize().backdrop().monetGlow(monet && !Bit.expressive)) {
                     if (!isDefault) {
                         SetupScreen(onSetDefault = ::requestRole, blocked = roleRefused.value)
                     } else {

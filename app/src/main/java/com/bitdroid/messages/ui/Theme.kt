@@ -163,7 +163,7 @@ object Themes {
     data class Choice(val key: String, val label: String)
 
     val all = listOf(
-        Choice("clean", "CLEAN"),
+        Choice("clean", "FRUIT"),
         Choice("bithome", "BITHOME"),
         Choice("amoled", "AMOLED"),
         Choice("lilac", "LILAC"),
@@ -182,7 +182,7 @@ object Themes {
     private val LILAC = black(0xFFEADDFF, 0xFF21005D)
     private val MINT = black(0xFFA6F2C9, 0xFF00391F)
 
-    /** Clean: true black with blue-violet gradient bubbles. */
+    /** Fruit (stored as "clean"): true black with blue-violet gradient bubbles. */
     val CLEAN = Palette(
         bg = Color(0xFF000000), accent = Color(0xFF6C74FA), onAccent = Color(0xFFFFFFFF),
         surface = Color(0xFF17171A), surfaceHigh = Color(0xFF232327), raised = Color(0xFF2C2C31),

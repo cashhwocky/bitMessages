@@ -84,12 +84,13 @@ object Shapes {
 /** Screen background: solid black, or the bitHome purple-to-teal wallpaper glow. */
 fun Modifier.backdrop(): Modifier =
     if (Bit.clean) background(Color.Black).drawBehind {
-        drawRect(
-            Brush.radialGradient(
-                listOf(Color(0xFF6E5AFA).copy(alpha = 0.32f), Color.Transparent),
-                center = Offset(size.width * 0.2f, -size.width * 0.15f), radius = size.width * 0.75f,
-            ),
+        // Fruit: colored light behind everything so the glass has something to catch.
+        fun glow(c: Long, a: Float, x: Float, y: Float, r: Float) = drawRect(
+            Brush.radialGradient(listOf(Color(c).copy(alpha = a), Color.Transparent), center = Offset(size.width * x, size.height * y), radius = size.width * r),
         )
+        glow(0xFF6E5AFA, 0.45f, 0.2f, -0.04f, 0.85f)
+        glow(0xFF3C82FF, 0.28f, 1.05f, 0.45f, 0.7f)
+        glow(0xFFC85ADC, 0.22f, -0.05f, 1.0f, 0.75f)
     } else if (!Bit.expressive) background(Bit.Black) else drawBehind {
         drawRect(Brush.verticalGradient(0f to Color(0xFF221A45), 0.45f to Color(0xFF120F1C), 1f to Color(0xFF0F1419)))
         drawRect(

@@ -231,16 +231,12 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
             Modifier.fillMaxWidth().statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                Modifier.size(42.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f)).clickable { vm.back() },
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(21.dp)) }
+            GlassCircle(44.dp, onClick = { vm.back() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(21.dp)) }
             Spacer(Modifier.width(10.dp))
             Box(Modifier.weight(1f)) {
                 Row(
-                    Modifier.fillMaxWidth().clip(CircleShape).background(Color.White.copy(alpha = 0.07f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.1f), CircleShape)
-                        .clickable { menu = true; vm.loadBlocked() }.padding(start = 5.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
+                    Modifier.fillMaxWidth().squish { menu = true; vm.loadBlocked() }.glass(CircleShape)
+                        .padding(start = 5.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Avatar(state.recipients, 42.dp)
@@ -257,12 +253,9 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
             }
             if (!isGroup && state.recipients.size == 1 && !Phone.isEmail(state.recipients[0].address)) {
                 Spacer(Modifier.width(10.dp))
-                Box(
-                    Modifier.size(42.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f)).clickable {
-                        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", state.recipients[0].address, null)))
-                    },
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Call, "Call", tint = Color.White, modifier = Modifier.size(20.dp)) }
+                GlassCircle(44.dp, onClick = {
+                    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", state.recipients[0].address, null)))
+                }) { Icon(Icons.Rounded.Call, "Call", tint = Color.White, modifier = Modifier.size(19.dp)) }
             }
         } else if (Bit.expressive) Row(
             Modifier.fillMaxWidth().statusBarsPadding().padding(start = 10.dp, end = 12.dp, top = 8.dp, bottom = 6.dp),
@@ -635,7 +628,7 @@ private fun CleanRun(
                     Modifier.widthIn(max = 280.dp)
                         .then(if (bad) Modifier.dashedBorder(2.dp, Bit.Error, 20.dp) else Modifier)
                         .clip(shape)
-                        .then(if (bad) Modifier else if (mine) Modifier.background(Bit.Gradient) else Modifier.background(Bit.SurfaceHigh))
+                        .then(if (bad) Modifier else if (mine) Modifier.background(Bit.Gradient).glassShine(0.22f) else Modifier.glass(shape))
                         .width(IntrinsicSize.Max),
                 ) {
                     Segment(m, Color.White, first = true, onImage, onRetry, onDownload, onCopy, onDelete, sel)
@@ -644,7 +637,7 @@ private fun CleanRun(
                     Box(
                         Modifier.align(if (mine) Alignment.BottomEnd else Alignment.BottomStart)
                             .offset(x = if (mine) 9.dp else (-9).dp, y = 3.dp)
-                            .size(7.dp).clip(CircleShape).background(if (mine) Bit.GradEnd else Bit.SurfaceHigh),
+                            .size(7.dp).clip(CircleShape).background(if (mine) Bit.GradEnd else Color.White.copy(alpha = 0.16f)),
                     )
                 }
             }
@@ -869,7 +862,7 @@ private fun Composer(
     Column(
         Modifier.fillMaxWidth()
             .background(
-                if (Bit.clean) Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))
+                if (Bit.clean) Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
                 else if (Bit.expressive) Brush.verticalGradient(listOf(Color.Transparent, Color(0xFF0F1419).copy(alpha = 0.6f)))
                 else Brush.verticalGradient(listOf(Color.Transparent, Bit.Black.copy(alpha = 0.75f), Bit.Black.copy(alpha = 0.85f))),
             )
@@ -901,10 +894,10 @@ private fun Composer(
             Box(
                 Modifier.padding(bottom = if (cl) 4.dp else 3.dp).size(if (cl) 44.dp else 52.dp)
                     .then(
-                        if (cl) Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.08f))
+                        if (cl) Modifier.squish(onClick = onAttach).glass(CircleShape)
                         else if (ex) Modifier.clip(Shapes.Gem).background(Bit.Tile) else Modifier.clip(CircleShape).border(2.dp, Bit.OutlineSoft, CircleShape),
                     )
-                    .clickable(onClick = onAttach),
+                    .then(if (cl) Modifier else Modifier.clickable(onClick = onAttach)),
                 contentAlignment = Alignment.Center,
             ) {
                 if (cl) Icon(Icons.Rounded.Add, "Attach picture", tint = Color(0xFFC8C8CE), modifier = Modifier.size(24.dp))
@@ -914,7 +907,7 @@ private fun Composer(
 
             Row(
                 Modifier.weight(1f).heightIn(min = if (cl) 50.dp else 58.dp).clip(RoundedCornerShape(if (cl) 25.dp else 29.dp))
-                    .then(if (cl) Modifier.background(Color(0xCC303036)).border(0.5.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(25.dp)) else if (ex) Modifier.background(Color(0xFF463E60)).border(2.5.dp, Bit.Accent.copy(alpha = 0.55f), RoundedCornerShape(29.dp)) else Modifier.border(2.5.dp, Color.White, RoundedCornerShape(29.dp)))
+                    .then(if (cl) Modifier.glass(RoundedCornerShape(25.dp)) else if (ex) Modifier.background(Color(0xFF463E60)).border(2.5.dp, Bit.Accent.copy(alpha = 0.55f), RoundedCornerShape(29.dp)) else Modifier.border(2.5.dp, Color.White, RoundedCornerShape(29.dp)))
                     .padding(start = if (cl) 16.dp else 18.dp, end = if (cl) 5.dp else 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -939,9 +932,8 @@ private fun Composer(
                 if (counter != null) Text(counter, style = mono(10.5f, FontWeight.Medium), modifier = Modifier.padding(horizontal = 4.dp))
                 if (cl) {
                     Box(
-                        Modifier.padding(start = 4.dp).size(38.dp).scale(sendScale).clip(CircleShape)
-                            .then(if (canSend) Modifier.background(Bit.Gradient) else Modifier.background(Bit.Raised))
-                            .clickable(enabled = canSend, onClick = onSend),
+                        Modifier.padding(start = 4.dp).size(38.dp).scale(sendScale).squish(enabled = canSend, onClick = onSend).clip(CircleShape)
+                            .then(if (canSend) Modifier.background(Bit.Gradient).glassShine(0.4f) else Modifier.background(Color.White.copy(alpha = 0.1f))),
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Rounded.ArrowUpward, "Send", tint = if (canSend) Color.White else Bit.TextDim, modifier = Modifier.size(20.dp)) }
                 }

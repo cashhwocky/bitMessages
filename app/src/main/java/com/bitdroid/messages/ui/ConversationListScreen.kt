@@ -254,7 +254,7 @@ fun ConversationListScreen(vm: AppViewModel) {
         // Fade + floating dock: search pill and new chat.
         val clean = Bit.clean
         val fadeTo = if (expressive) Color(0xFF0F1419) else Bit.Black
-        Box(
+        if (!clean) Box(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(150.dp)
                 .background(Brush.verticalGradient(listOf(Color.Transparent, fadeTo.copy(alpha = 0.7f), fadeTo.copy(alpha = 0.85f)))),
         )
@@ -266,8 +266,7 @@ fun ConversationListScreen(vm: AppViewModel) {
         ) {
             Row(
                 if (clean) {
-                    Modifier.weight(1f).height(50.dp).clip(CircleShape).background(Color(0xCC303036))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.14f), CircleShape).padding(start = 16.dp, end = 6.dp)
+                    Modifier.weight(1f).height(54.dp).glass(CircleShape).glassSweep().padding(start = 18.dp, end = 6.dp)
                 } else if (expressive) {
                     Modifier.weight(1f).height(62.dp).clip(CircleShape).background(Color(0xFF463E60))
                         .border(2.5.dp, Bit.Accent.copy(alpha = 0.55f), CircleShape).padding(start = 7.dp, end = 6.dp)
@@ -283,7 +282,7 @@ fun ConversationListScreen(vm: AppViewModel) {
                     }
                     Spacer(Modifier.width(14.dp))
                 } else if (clean) {
-                    Icon(Icons.Rounded.Search, null, tint = Bit.TextDim, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Rounded.Search, null, tint = Color(0xFFD0D0D8), modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
                 } else {
                     Icon(Icons.Rounded.Search, null, tint = Color.White, modifier = Modifier.size(24.dp))
@@ -291,7 +290,7 @@ fun ConversationListScreen(vm: AppViewModel) {
                 }
                 Box(Modifier.weight(1f)) {
                     if (query.isEmpty()) {
-                        if (clean) Text("Search", color = Bit.TextDim, fontSize = 17.sp)
+                        if (clean) Text("Search", color = Color(0xFFD0D0D8), fontSize = 17.sp)
                         else if (expressive) Text("Search chats", color = Color(0xFFEDE6FF), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                         else Text("Search", color = Bit.TextDim, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                     }
@@ -395,17 +394,17 @@ private fun CleanHeader(vm: AppViewModel, unread: Int, onSelect: () -> Unit) {
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.height(38.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f)).clickable(onClick = onSelect).padding(horizontal = 15.dp),
+                Modifier.height(40.dp).squish(onClick = onSelect).glass(CircleShape).padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center,
             ) { Text("Edit", fontSize = 15.5.sp, fontWeight = FontWeight.Medium) }
             Spacer(Modifier.weight(1f))
-            Box(Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.08f))) { HeaderMenu(vm, onSelect, Color.Transparent) }
+            Box(Modifier.glass(CircleShape)) { HeaderMenu(vm, onSelect, Color.Transparent) }
             Spacer(Modifier.width(10.dp))
             Box(
-                Modifier.size(42.dp).clip(CircleShape).background(Bit.Gradient).clickable {
+                Modifier.size(44.dp).squish {
                     view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                     vm.push(Screen.NewChat)
-                },
+                }.clip(CircleShape).background(Bit.Gradient).glassShine(0.4f),
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Rounded.Edit, "Start chat", tint = Color.White, modifier = Modifier.size(19.dp)) }
         }
@@ -444,9 +443,8 @@ private fun CleanPin(c: Conversation, selectMode: Boolean, selected: Boolean, on
                 Box(Modifier.align(Alignment.TopCenter).offset(y = (-36).dp)) {
                     Text(
                         c.snippet, fontSize = 12.sp, color = Color(0xFFDDDDE2), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 112.dp).clip(RoundedCornerShape(13.dp)).background(Bit.SurfaceHigh).padding(horizontal = 10.dp, vertical = 5.dp),
+                        modifier = Modifier.widthIn(max = 112.dp).glass(RoundedCornerShape(13.dp)).padding(horizontal = 11.dp, vertical = 5.dp),
                     )
-                    Box(Modifier.align(Alignment.BottomCenter).offset(y = 5.dp).size(7.dp).clip(CircleShape).background(Bit.SurfaceHigh))
                 }
             }
             if (selectMode) SelectDot(selected, Modifier.align(Alignment.BottomEnd))

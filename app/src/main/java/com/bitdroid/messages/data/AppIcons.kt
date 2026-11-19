@@ -8,6 +8,7 @@ object AppIcons {
     data class Choice(val key: String, val label: String, val alias: String, val bg: Long, val fgDark: Boolean, val art: Int? = null)
 
     val all = listOf(
+        Choice("glass", "GLASS", ".IconGlass", 0xFF22C35E, false, com.bitdroid.messages.R.drawable.ic_launcher_foreground_glass),
         Choice("you", "BUBBLES", ".IconYou", 0xFFDCD4F6, true, com.bitdroid.messages.R.drawable.ic_launcher_foreground_you),
         Choice("white", "WHITE", ".IconWhite", 0xFFFFFFFF, true),
         Choice("black", "AMOLED", ".IconBlack", 0xFF000000, false),
@@ -15,7 +16,7 @@ object AppIcons {
         Choice("lilac", "LILAC", ".IconLilac", 0xFFEADDFF, true),
     )
 
-    fun current(context: Context): String = Prefs.get(context).getString("app_icon", "you") ?: "you"
+    fun current(context: Context): String = Prefs.get(context).getString("app_icon", "glass") ?: "glass"
 
     fun set(context: Context, key: String) {
         val pm = context.packageManager

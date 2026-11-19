@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -226,7 +227,44 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
                 },
                 SelectAction("Delete", Icons.Rounded.Delete, Bit.Error) { confirmMsgDelete = true },
             ),
-        ) else if (Bit.expressive) Row(
+        ) else if (Bit.clean) Row(
+            Modifier.fillMaxWidth().statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(42.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f)).clickable { vm.back() },
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(21.dp)) }
+            Spacer(Modifier.width(10.dp))
+            Box(Modifier.weight(1f)) {
+                Row(
+                    Modifier.fillMaxWidth().clip(CircleShape).background(Color.White.copy(alpha = 0.07f))
+                        .border(0.5.dp, Color.White.copy(alpha = 0.1f), CircleShape)
+                        .clickable { menu = true; vm.loadBlocked() }.padding(start = 5.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Avatar(state.recipients, 42.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            listOfNotNull(if (isGroup) "GROUP" else "SMS", if (sims.size > 1 && sim != null) "SIM ${sim.slotIndex + 1}" else null).joinToString(" · "),
+                            style = mono(10.5f, color = Bit.Info, spacing = 0.5f),
+                        )
+                    }
+                }
+                ThreadMenu(menu, { menu = false }, pinned, blocked, isGroup, state.recipients, threadId, vm, onDelete = { confirmDelete = true })
+            }
+            if (!isGroup && state.recipients.size == 1 && !Phone.isEmail(state.recipients[0].address)) {
+                Spacer(Modifier.width(10.dp))
+                Box(
+                    Modifier.size(42.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f)).clickable {
+                        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", state.recipients[0].address, null)))
+                    },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Rounded.Call, "Call", tint = Color.White, modifier = Modifier.size(20.dp)) }
+            }
+        } else if (Bit.expressive) Row(
             Modifier.fillMaxWidth().statusBarsPadding().padding(start = 10.dp, end = 12.dp, top = 8.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -287,7 +325,7 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
                 ThreadMenu(menu, { menu = false }, pinned, blocked, isGroup, state.recipients, threadId, vm, onDelete = { confirmDelete = true })
             }
         }
-        if (!Bit.expressive) Box(Modifier.fillMaxWidth().height(1.dp).background(Bit.Hairline))
+        if (!Bit.expressive && !Bit.clean) Box(Modifier.fillMaxWidth().height(1.dp).background(Bit.Hairline))
 
         // --------------------------------------------------------- messages
         Box(Modifier.weight(1f)) {
@@ -434,6 +472,12 @@ private fun OutlinedCircle(onClick: () -> Unit, size: Dp = 44.dp, content: @Comp
 
 @Composable
 private fun DayRule(label: String) {
+    if (Bit.clean) {
+        Box(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 8.dp), contentAlignment = Alignment.Center) {
+            Text(label.uppercase(), style = mono(10.5f, FontWeight.Medium, Bit.TextDim, 1f))
+        }
+        return
+    }
     if (Bit.expressive) {
         Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
             Row(
@@ -507,6 +551,10 @@ private fun RunBlock(
                 modifier = Modifier.padding(start = 10.dp, bottom = 5.dp),
             )
         }
+        if (Bit.clean) {
+            CleanRun(run, mine, failed, onImage, onRetry, onDownload, onCopy, onDelete, sel)
+            return@Column
+        }
         if (Bit.expressive) {
             HomeRun(run, mine, failed, onImage, onRetry, onDownload, onCopy, onDelete, sel)
             return@Column
@@ -554,6 +602,73 @@ private fun RunBlock(
                 Icon(Icons.Rounded.Refresh, null, tint = Bit.Error, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("NOT SENT · TAP TO RETRY", style = mono(10.5f, color = Bit.Error))
+            }
+        }
+    }
+}
+
+/** Clean: separate bubbles; yours in the blue-violet gradient. The last one gets a sharp corner and a little dot. */
+@Composable
+private fun CleanRun(
+    run: ChatItem.Run,
+    mine: Boolean,
+    failed: Boolean,
+    onImage: (Uri) -> Unit,
+    onRetry: (Message) -> Unit,
+    onDownload: (Message) -> Unit,
+    onCopy: (Message) -> Unit,
+    onDelete: (Message) -> Unit,
+    sel: Selection<String>,
+) {
+    val context = LocalContext.current
+    Column(horizontalAlignment = if (mine) Alignment.End else Alignment.Start, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        run.messages.forEachIndexed { i, m ->
+            val last = i == run.messages.lastIndex
+            val shape = when {
+                mine && last -> RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp)
+                last -> RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp)
+                else -> RoundedCornerShape(20.dp)
+            }
+            val bad = m.status == MessageStatus.FAILED
+            Box {
+                Box(
+                    Modifier.widthIn(max = 280.dp)
+                        .then(if (bad) Modifier.dashedBorder(2.dp, Bit.Error, 20.dp) else Modifier)
+                        .clip(shape)
+                        .then(if (bad) Modifier else if (mine) Modifier.background(Bit.Gradient) else Modifier.background(Bit.SurfaceHigh))
+                        .width(IntrinsicSize.Max),
+                ) {
+                    Segment(m, Color.White, first = true, onImage, onRetry, onDownload, onCopy, onDelete, sel)
+                }
+                if (last && !bad) {
+                    Box(
+                        Modifier.align(if (mine) Alignment.BottomEnd else Alignment.BottomStart)
+                            .offset(x = if (mine) 9.dp else (-9).dp, y = 3.dp)
+                            .size(7.dp).clip(CircleShape).background(if (mine) Bit.GradEnd else Bit.SurfaceHigh),
+                    )
+                }
+            }
+        }
+        val last = run.last
+        val status = when {
+            failed -> null
+            !mine -> shortClock(context, last.date)
+            last.status == MessageStatus.SENDING -> "SENDING"
+            last.status == MessageStatus.DELIVERED -> "DELIVERED " + shortClock(context, last.date)
+            else -> "SENT " + shortClock(context, last.date)
+        }
+        if (status != null) {
+            Text(status.uppercase(), style = mono(10.5f, FontWeight.Medium, Bit.TextDim, 0.5f), modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+        }
+        if (failed) {
+            Row(
+                Modifier.clip(CircleShape).clickable { run.messages.filter { it.status == MessageStatus.FAILED }.forEach(onRetry) }
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Rounded.Refresh, null, tint = Bit.Error, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("NOT SENT · TAP TO RETRY", style = mono(10.5f, color = Bit.Error, spacing = 0.5f))
             }
         }
     }
@@ -754,7 +869,8 @@ private fun Composer(
     Column(
         Modifier.fillMaxWidth()
             .background(
-                if (Bit.expressive) Brush.verticalGradient(listOf(Color.Transparent, Color(0xFF0F1419).copy(alpha = 0.6f)))
+                if (Bit.clean) Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))
+                else if (Bit.expressive) Brush.verticalGradient(listOf(Color.Transparent, Color(0xFF0F1419).copy(alpha = 0.6f)))
                 else Brush.verticalGradient(listOf(Color.Transparent, Bit.Black.copy(alpha = 0.75f), Bit.Black.copy(alpha = 0.85f))),
             )
             .navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 12.dp),
@@ -781,24 +897,29 @@ private fun Composer(
         }
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val ex = Bit.expressive
+            val cl = Bit.clean
             Box(
-                Modifier.padding(bottom = 3.dp).size(52.dp)
-                    .then(if (ex) Modifier.clip(Shapes.Gem).background(Bit.Tile) else Modifier.clip(CircleShape).border(2.dp, Bit.OutlineSoft, CircleShape))
+                Modifier.padding(bottom = if (cl) 4.dp else 3.dp).size(if (cl) 44.dp else 52.dp)
+                    .then(
+                        if (cl) Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.08f))
+                        else if (ex) Modifier.clip(Shapes.Gem).background(Bit.Tile) else Modifier.clip(CircleShape).border(2.dp, Bit.OutlineSoft, CircleShape),
+                    )
                     .clickable(onClick = onAttach),
                 contentAlignment = Alignment.Center,
             ) {
-                if (ex) Icon(Icons.Rounded.Add, "Attach picture", tint = Color.White, modifier = Modifier.size(24.dp))
+                if (cl) Icon(Icons.Rounded.Add, "Attach picture", tint = Color(0xFFC8C8CE), modifier = Modifier.size(24.dp))
+                else if (ex) Icon(Icons.Rounded.Add, "Attach picture", tint = Color.White, modifier = Modifier.size(24.dp))
                 else Icon(Icons.Rounded.Image, "Attach picture", tint = Bit.Accent, modifier = Modifier.size(22.dp))
             }
 
             Row(
-                Modifier.weight(1f).heightIn(min = 58.dp).clip(RoundedCornerShape(29.dp))
-                    .then(if (ex) Modifier.background(Color(0xFF463E60)).border(2.5.dp, Bit.Accent.copy(alpha = 0.55f), RoundedCornerShape(29.dp)) else Modifier.border(2.5.dp, Color.White, RoundedCornerShape(29.dp)))
-                    .padding(start = 18.dp, end = 8.dp),
+                Modifier.weight(1f).heightIn(min = if (cl) 50.dp else 58.dp).clip(RoundedCornerShape(if (cl) 25.dp else 29.dp))
+                    .then(if (cl) Modifier.background(Color(0xCC303036)).border(0.5.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(25.dp)) else if (ex) Modifier.background(Color(0xFF463E60)).border(2.5.dp, Bit.Accent.copy(alpha = 0.55f), RoundedCornerShape(29.dp)) else Modifier.border(2.5.dp, Color.White, RoundedCornerShape(29.dp)))
+                    .padding(start = if (cl) 16.dp else 18.dp, end = if (cl) 5.dp else 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.weight(1f).padding(vertical = 16.dp)) {
-                    if (text.isEmpty()) Text(if (images.isEmpty()) "Text message" else "Add a caption", color = Bit.TextDim, fontSize = 16.5.sp, fontWeight = FontWeight.SemiBold)
+                Box(Modifier.weight(1f).padding(vertical = if (cl) 13.dp else 16.dp)) {
+                    if (text.isEmpty()) Text(if (images.isEmpty()) "Text message" else "Add a caption", color = Bit.TextDim, fontSize = 16.5.sp, fontWeight = if (cl) FontWeight.Normal else FontWeight.SemiBold)
                     BasicTextField(
                         value = text,
                         onValueChange = onText,
@@ -816,6 +937,14 @@ private fun Composer(
                     }
                 }
                 if (counter != null) Text(counter, style = mono(10.5f, FontWeight.Medium), modifier = Modifier.padding(horizontal = 4.dp))
+                if (cl) {
+                    Box(
+                        Modifier.padding(start = 4.dp).size(38.dp).scale(sendScale).clip(CircleShape)
+                            .then(if (canSend) Modifier.background(Bit.Gradient) else Modifier.background(Bit.Raised))
+                            .clickable(enabled = canSend, onClick = onSend),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Rounded.ArrowUpward, "Send", tint = if (canSend) Color.White else Bit.TextDim, modifier = Modifier.size(20.dp)) }
+                }
                 if (sims.size > 1 && sim != null) {
                     Box {
                         Box(
@@ -841,7 +970,7 @@ private fun Composer(
                 }
             }
 
-            Box(
+            if (!cl) Box(
                 Modifier.padding(bottom = 0.dp).size(58.dp).scale(sendScale)
                     .clip(if (ex) Shapes.Triangle else CircleShape).background(if (canSend) Bit.Accent else Bit.Raised)
                     .clickable(enabled = canSend, onClick = onSend),

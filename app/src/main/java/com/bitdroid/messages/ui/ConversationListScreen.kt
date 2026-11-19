@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -160,7 +161,8 @@ fun ConversationListScreen(vm: AppViewModel) {
                         ),
                     )
                 } else {
-                    if (Bit.expressive) HomeHeader(vm, unreadTotal, conversations.size, onSelect = { sel.start() })
+                    if (Bit.clean) CleanHeader(vm, unreadTotal, onSelect = { sel.start() })
+                    else if (Bit.expressive) HomeHeader(vm, unreadTotal, conversations.size, onSelect = { sel.start() })
                     else Header(vm, unreadTotal, conversations.size, onSelect = { sel.start() })
                 }
             }
@@ -186,13 +188,15 @@ fun ConversationListScreen(vm: AppViewModel) {
                         }
                     }
                 } else if (rest.isNotEmpty()) {
-                    if (!expressive) item(key = "label") { SectionRule(if (pinned.isEmpty()) "CHATS" else "ALL CHATS") }
+                    if (Bit.clean) item(key = "rule") { Box(Modifier.padding(horizontal = 18.dp).fillMaxWidth().height(0.5.dp).background(Bit.Hairline)) }
+                    else if (!expressive) item(key = "label") { SectionRule(if (pinned.isEmpty()) "CHATS" else "ALL CHATS") }
                     else item(key = "gap") { Spacer(Modifier.height(14.dp)) }
                     itemsIndexed(rest, key = { _, it -> it.threadId }) { index, c ->
                         val pink = expressive && c.unread
                         val surface = when {
                             pink -> Modifier.padding(start = 14.dp, end = 14.dp, bottom = 10.dp).clip(CircleShape).background(Bit.Pink)
                             expressive -> homePanel(index == firstRead, index == rest.lastIndex)
+                            Bit.clean -> Modifier
                             else -> rowSurface(listStyle, index == 0, index == rest.lastIndex)
                         }
                         SwipeRow(
@@ -211,6 +215,20 @@ fun ConversationListScreen(vm: AppViewModel) {
                             },
                         ) {
                             Box(surface) {
+                                if (Bit.clean) CleanRow(
+                                    c,
+                                    selectMode = sel.active,
+                                    selected = c.threadId in sel,
+                                    onClick = {
+                                        if (sel.active) {
+                                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                            sel.toggle(c.threadId)
+                                        } else {
+                                            vm.openThread(c.threadId)
+                                        }
+                                    },
+                                    onLong = { if (sel.active) sel.toggle(c.threadId) else openMenu(c) },
+                                ) else
                                 ConversationRow(
                                     c,
                                     pink = pink,
@@ -234,6 +252,7 @@ fun ConversationListScreen(vm: AppViewModel) {
         }
 
         // Fade + floating dock: search pill and new chat.
+        val clean = Bit.clean
         val fadeTo = if (expressive) Color(0xFF0F1419) else Bit.Black
         Box(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(150.dp)
@@ -246,7 +265,10 @@ fun ConversationListScreen(vm: AppViewModel) {
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(
-                if (expressive) {
+                if (clean) {
+                    Modifier.weight(1f).height(50.dp).clip(CircleShape).background(Color(0xCC303036))
+                        .border(0.5.dp, Color.White.copy(alpha = 0.14f), CircleShape).padding(start = 16.dp, end = 6.dp)
+                } else if (expressive) {
                     Modifier.weight(1f).height(62.dp).clip(CircleShape).background(Color(0xFF463E60))
                         .border(2.5.dp, Bit.Accent.copy(alpha = 0.55f), CircleShape).padding(start = 7.dp, end = 6.dp)
                 } else {
@@ -260,13 +282,17 @@ fun ConversationListScreen(vm: AppViewModel) {
                         Icon(Icons.Rounded.Search, null, tint = Bit.OnAccent, modifier = Modifier.size(24.dp))
                     }
                     Spacer(Modifier.width(14.dp))
+                } else if (clean) {
+                    Icon(Icons.Rounded.Search, null, tint = Bit.TextDim, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
                 } else {
                     Icon(Icons.Rounded.Search, null, tint = Color.White, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(12.dp))
                 }
                 Box(Modifier.weight(1f)) {
                     if (query.isEmpty()) {
-                        if (expressive) Text("Search chats", color = Color(0xFFEDE6FF), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                        if (clean) Text("Search", color = Bit.TextDim, fontSize = 17.sp)
+                        else if (expressive) Text("Search chats", color = Color(0xFFEDE6FF), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                         else Text("Search", color = Bit.TextDim, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                     }
                     BasicTextField(
@@ -283,7 +309,8 @@ fun ConversationListScreen(vm: AppViewModel) {
                     IconButton(onClick = { vm.setQuery("") }) { Icon(Icons.Rounded.Close, "Clear", tint = Color.White) }
                 }
             }
-            Box(
+            // Clean keeps compose in the header, so no floating button.
+            if (!clean) Box(
                 Modifier.size(if (expressive) 70.dp else 62.dp)
                     .clip(if (expressive) Shapes.Ripple7 else CircleShape).background(if (expressive) Bit.Light else Bit.Accent)
                     .clickable {
@@ -358,6 +385,117 @@ fun ConversationListScreen(vm: AppViewModel) {
             },
             dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Cancel", color = Color.White) } },
         )
+    }
+}
+
+/** Clean header: Edit pill, menu and compose up top, then a big "Messages" title with a mono count. */
+@Composable
+private fun CleanHeader(vm: AppViewModel, unread: Int, onSelect: () -> Unit) {
+    val view = LocalView.current
+    Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.height(38.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f)).clickable(onClick = onSelect).padding(horizontal = 15.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text("Edit", fontSize = 15.5.sp, fontWeight = FontWeight.Medium) }
+            Spacer(Modifier.weight(1f))
+            Box(Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.08f))) { HeaderMenu(vm, onSelect, Color.Transparent) }
+            Spacer(Modifier.width(10.dp))
+            Box(
+                Modifier.size(42.dp).clip(CircleShape).background(Bit.Gradient).clickable {
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    vm.push(Screen.NewChat)
+                },
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Rounded.Edit, "Start chat", tint = Color.White, modifier = Modifier.size(19.dp)) }
+        }
+        Row(Modifier.padding(start = 20.dp, top = 14.dp, end = 20.dp), verticalAlignment = Alignment.Bottom) {
+            Text("Messages", fontFamily = Body, fontWeight = FontWeight.Bold, fontSize = 34.sp, letterSpacing = (-0.6).sp)
+            if (unread > 0) {
+                Spacer(Modifier.width(10.dp))
+                Text("$unread NEW", style = mono(12f, color = Bit.Info, spacing = 0.5f), modifier = Modifier.padding(bottom = 7.dp))
+            }
+        }
+    }
+}
+
+/** Clean pin: big round avatar; unread ones get a gradient ring and a peek of the last message above. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CleanPin(c: Conversation, selectMode: Boolean, selected: Boolean, onOpen: (Conversation) -> Unit, onLong: (Conversation) -> Unit) {
+    val pop = remember(c.threadId) { Animatable(0.6f) }
+    LaunchedEffect(c.threadId) { pop.animateTo(1f, Bit.bouncy) }
+    Column(
+        Modifier.graphicsLayer { scaleX = pop.value; scaleY = pop.value }
+            .clip(RoundedCornerShape(22.dp))
+            .combinedClickable(onClick = { onOpen(c) }, onLongClick = { onLong(c) })
+            .padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            if (c.unread) {
+                Box(Modifier.size(90.dp).clip(CircleShape).background(Bit.Gradient).padding(3.dp).clip(CircleShape).background(Color.Black).padding(3.dp)) {
+                    Avatar(c.recipients, 78.dp)
+                }
+            } else {
+                Avatar(c.recipients, 82.dp, Modifier.padding(4.dp))
+            }
+            if (c.unread && c.snippet.isNotBlank()) {
+                Box(Modifier.align(Alignment.TopCenter).offset(y = (-36).dp)) {
+                    Text(
+                        c.snippet, fontSize = 12.sp, color = Color(0xFFDDDDE2), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 112.dp).clip(RoundedCornerShape(13.dp)).background(Bit.SurfaceHigh).padding(horizontal = 10.dp, vertical = 5.dp),
+                    )
+                    Box(Modifier.align(Alignment.BottomCenter).offset(y = 5.dp).size(7.dp).clip(CircleShape).background(Bit.SurfaceHigh))
+                }
+            }
+            if (selectMode) SelectDot(selected, Modifier.align(Alignment.BottomEnd))
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            c.recipients.singleOrNull()?.name?.substringBefore(' ') ?: c.title,
+            fontSize = 13.sp, fontWeight = if (c.unread) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (c.unread) Color.White else Bit.TextDim, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 100.dp),
+        )
+    }
+}
+
+/** Clean row: plain list, inset hairline, mono time, gradient dot when unread. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CleanRow(c: Conversation, selectMode: Boolean, selected: Boolean, onClick: () -> Unit, onLong: () -> Unit) {
+    val context = LocalContext.current
+    Row(
+        Modifier.fillMaxWidth().background(if (selected) Color.White.copy(alpha = 0.06f) else Color.Transparent)
+            .combinedClickable(onClick = onClick, onLongClick = onLong).padding(start = 8.dp).height(74.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(14.dp), contentAlignment = Alignment.Center) {
+            if (c.unread) Box(Modifier.size(9.dp).clip(CircleShape).background(Bit.Gradient))
+        }
+        Box(Modifier.padding(start = 2.dp, end = 12.dp)) {
+            Avatar(c.recipients, 48.dp)
+            if (selectMode) SelectDot(selected, Modifier.align(Alignment.BottomEnd))
+        }
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+            Column(Modifier.weight(1f).padding(end = 18.dp), verticalArrangement = Arrangement.Center) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        c.title, fontSize = 16.5.sp, fontWeight = if (c.unread) FontWeight.Bold else FontWeight.SemiBold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(shortTime(context, c.date).uppercase(), style = mono(11.5f, FontWeight.Medium, if (c.unread) Bit.Info else Bit.TextDim, 0.3f))
+                }
+                Text(
+                    if (c.hasError) "Not sent" else c.snippet,
+                    color = if (c.hasError) Bit.Error else if (c.unread) Color(0xFFD6D6DC) else Bit.TextDim,
+                    fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            Box(Modifier.fillMaxWidth().height(0.5.dp).background(Bit.Hairline))
+        }
     }
 }
 
@@ -487,14 +625,15 @@ fun SectionRule(label: String) {
 @Composable
 private fun PinGrid(pins: List<Conversation>, sel: Selection<Long>, onOpen: (Conversation) -> Unit, onLong: (Conversation) -> Unit) {
     Column(
-        Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = if (Bit.expressive) 20.dp else 30.dp),
-        verticalArrangement = Arrangement.spacedBy(if (Bit.expressive) 16.dp else 28.dp),
+        Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = if (Bit.clean) 44.dp else if (Bit.expressive) 20.dp else 30.dp, bottom = if (Bit.clean) 16.dp else 0.dp),
+        verticalArrangement = Arrangement.spacedBy(if (Bit.clean) 44.dp else if (Bit.expressive) 16.dp else 28.dp),
     ) {
         pins.chunked(3).forEachIndexed { r, row ->
             Row(Modifier.fillMaxWidth()) {
                 row.forEachIndexed { i, c ->
                     Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) {
-                        if (Bit.expressive) HomePin(c, pinShapes[(r * 3 + i) % pinShapes.size], sel.active, c.threadId in sel, onOpen, onLong)
+                        if (Bit.clean) CleanPin(c, sel.active, c.threadId in sel, onOpen, onLong)
+                        else if (Bit.expressive) HomePin(c, pinShapes[(r * 3 + i) % pinShapes.size], sel.active, c.threadId in sel, onOpen, onLong)
                         else Pin(c, sel.active, c.threadId in sel, onOpen, onLong)
                     }
                 }

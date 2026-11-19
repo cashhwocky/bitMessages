@@ -326,6 +326,8 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
                     vm.push(Screen.Blocked)
                 }
             }
+            item { SectionLabel("Updates") }
+            item { UpdateCard() }
             item { SectionLabel("Look") }
             item { ThemePicker() }
             item { IconPicker() }

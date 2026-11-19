@@ -67,6 +67,12 @@ jobs:
           mkdir -p out
           cp app/build/outputs/apk/release/*.apk out/
           cp app/build/outputs/apk/debug/*.apk out/
+          # update.json tells the in-app updater which build is newest.
+          code=$(grep -oP 'versionCode = \K[0-9]+' app/build.gradle.kts)
+          name=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          apk=$(cd out && ls *-release.apk | head -1)
+          printf '{"versionCode":%s,"versionName":"%s","apk":"%s"}\n' "$code" "$name" "$apk" > out/update.json
+          cat out/update.json
           ls -la out
 
       - uses: actions/upload-artifact@v4
@@ -79,5 +85,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.release_tag || github.ref_name }}
-          files: out/*-release.apk
+          files: |
+            out/*-release.apk
+            out/update.json
           generate_release_notes: true

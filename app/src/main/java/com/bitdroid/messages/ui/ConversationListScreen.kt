@@ -1,5 +1,6 @@
 package com.bitdroid.messages.ui
 
+import dev.chrisbanes.haze.hazeSource
 import android.view.HapticFeedbackConstants
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -137,9 +138,10 @@ fun ConversationListScreen(vm: AppViewModel) {
 
     val blur by animateDpAsState(if (menuFor != null) 14.dp else 0.dp, label = "blur")
 
+    val haze = remember { dev.chrisbanes.haze.HazeState() }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            Modifier.fillMaxSize().blur(blur),
+            Modifier.fillMaxSize().blur(blur).then(if (Bit.clean) Modifier.hazeSource(haze) else Modifier),
             contentPadding = PaddingValues(bottom = 130.dp),
         ) {
             item(key = "header") {
@@ -266,7 +268,7 @@ fun ConversationListScreen(vm: AppViewModel) {
         ) {
             Row(
                 if (clean) {
-                    Modifier.weight(1f).height(54.dp).glass(CircleShape).glassSweep().padding(start = 18.dp, end = 6.dp)
+                    Modifier.weight(1f).height(54.dp).frosted(haze, CircleShape).padding(start = 18.dp, end = 6.dp)
                 } else if (expressive) {
                     Modifier.weight(1f).height(62.dp).clip(CircleShape).background(Color(0xFF463E60))
                         .border(2.5.dp, Bit.Accent.copy(alpha = 0.55f), CircleShape).padding(start = 7.dp, end = 6.dp)
@@ -422,10 +424,8 @@ private fun CleanHeader(vm: AppViewModel, unread: Int, onSelect: () -> Unit) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CleanPin(c: Conversation, selectMode: Boolean, selected: Boolean, onOpen: (Conversation) -> Unit, onLong: (Conversation) -> Unit) {
-    val pop = remember(c.threadId) { Animatable(0.6f) }
-    LaunchedEffect(c.threadId) { pop.animateTo(1f, Bit.bouncy) }
     Column(
-        Modifier.graphicsLayer { scaleX = pop.value; scaleY = pop.value }
+        Modifier
             .clip(RoundedCornerShape(22.dp))
             .combinedClickable(onClick = { onOpen(c) }, onLongClick = { onLong(c) })
             .padding(4.dp),

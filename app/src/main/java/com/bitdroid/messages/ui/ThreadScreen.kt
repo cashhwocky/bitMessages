@@ -628,7 +628,7 @@ private fun CleanRun(
                     Modifier.widthIn(max = 280.dp)
                         .then(if (bad) Modifier.dashedBorder(2.dp, Bit.Error, 20.dp) else Modifier)
                         .clip(shape)
-                        .then(if (bad) Modifier else if (mine) Modifier.background(Bit.Gradient).glassShine(0.22f) else Modifier.glass(shape))
+                        .then(if (bad) Modifier else if (mine) Modifier.background(Bit.Gradient) else Modifier.background(Bit.SurfaceHigh))
                         .width(IntrinsicSize.Max),
                 ) {
                     Segment(m, Color.White, first = true, onImage, onRetry, onDownload, onCopy, onDelete, sel)
@@ -637,7 +637,7 @@ private fun CleanRun(
                     Box(
                         Modifier.align(if (mine) Alignment.BottomEnd else Alignment.BottomStart)
                             .offset(x = if (mine) 9.dp else (-9).dp, y = 3.dp)
-                            .size(7.dp).clip(CircleShape).background(if (mine) Bit.GradEnd else Color.White.copy(alpha = 0.16f)),
+                            .size(7.dp).clip(CircleShape).background(if (mine) Bit.GradEnd else Bit.SurfaceHigh),
                     )
                 }
             }

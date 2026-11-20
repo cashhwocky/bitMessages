@@ -25,8 +25,8 @@
     <application
         android:name=".BitMessagesApp"
         android:allowBackup="false"
-        android:icon="@mipmap/ic_launcher_glass"
-        android:roundIcon="@mipmap/ic_launcher_glass"
+        android:icon="@mipmap/ic_launcher_you"
+        android:roundIcon="@mipmap/ic_launcher_you"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.BitMessages"
@@ -117,7 +117,7 @@
 
         <activity-alias
             android:name=".IconYou"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_you"
             android:roundIcon="@mipmap/ic_launcher_you"
@@ -130,7 +130,7 @@
 
         <activity-alias
             android:name=".IconGlass"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_glass"
             android:roundIcon="@mipmap/ic_launcher_glass"

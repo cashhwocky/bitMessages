@@ -260,7 +260,7 @@ fun ConversationListScreen(vm: AppViewModel) {
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(150.dp)
                 .background(Brush.verticalGradient(listOf(Color.Transparent, fadeTo.copy(alpha = 0.7f), fadeTo.copy(alpha = 0.85f)))),
         )
-        Row(
+        if (!clean) Row(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().imePadding().navigationBarsPadding()
                 .padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically,

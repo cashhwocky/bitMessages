@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Gradient symbol with a soft glow behind it. -->
+<!-- See-through glass symbol with a bright edge. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <path android:pathData="M54,54m-30,0a30,30 0,1 1,60 0a30,30 0,1 1,-60 0">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="radial" android:centerX="54" android:centerY="54" android:gradientRadius="30"
-                android:startColor="#664F7CFF" android:endColor="#004F7CFF" />
-        </aapt:attr>
-    </path>
-    <group android:scaleX="0.44" android:scaleY="0.44" android:pivotX="54" android:pivotY="54">
-            <path android:pathData="M30,30h48a14,14 0,0 1,14 14v18a14,14 0,0 1,-14 14H46l-12,9v-9h-4a14,14 0,0 1,-14 -14V44a14,14 0,0 1,14 -14z"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="20" android:startY="24" android:endX="90" android:endY="92" android:startColor="#FF7B5CF5" android:endColor="#FF4F7CFF" /></aapt:attr></path>
-            <path android:pathData="M26,90m-4.2,0a4.2,4.2 0,1 1,8.4 0a4.2,4.2 0,1 1,-8.4 0"><aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="20" android:startY="24" android:endX="90" android:endY="92" android:startColor="#FF7B5CF5" android:endColor="#FF4F7CFF" /></aapt:attr></path>
+    <group android:scaleX="0.46" android:scaleY="0.46" android:pivotX="54" android:pivotY="54">
+            <path android:pathData="M30,30h48a14,14 0,0 1,14 14v18a14,14 0,0 1,-14 14H46l-12,9v-9h-4a14,14 0,0 1,-14 -14V44a14,14 0,0 1,14 -14z" android:strokeColor="#E6FFFFFF" android:strokeWidth="2.4" android:strokeLineJoin="round">
+                <aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="0" android:startY="30" android:endX="0" android:endY="85" android:startColor="#8CFFFFFF" android:endColor="#2EFFFFFF" /></aapt:attr>
+            </path>
+            <path android:pathData="M26,90m-4.2,0a4.2,4.2 0,1 1,8.4 0a4.2,4.2 0,1 1,-8.4 0" android:strokeColor="#E6FFFFFF" android:strokeWidth="2.4" android:strokeLineJoin="round">
+                <aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="0" android:startY="86" android:endX="0" android:endY="94" android:startColor="#8CFFFFFF" android:endColor="#2EFFFFFF" /></aapt:attr>
+            </path>
     </group>
 </vector>

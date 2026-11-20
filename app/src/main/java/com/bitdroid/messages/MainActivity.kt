@@ -1,5 +1,13 @@
 package com.bitdroid.messages
 
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.ChatBubble
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
 import android.Manifest
@@ -108,8 +116,9 @@ class MainActivity : ComponentActivity() {
                         }
                         val target = vm.stack.last()
                         val depth = vm.stack.size
+                        val haze = remember { dev.chrisbanes.haze.HazeState() }
                         AnimatedContent(
-                            modifier = Modifier.graphicsLayer {
+                            modifier = Modifier.then(if (Bit.clean) Modifier.hazeSource(haze) else Modifier).graphicsLayer {
                                 val p = backProgress
                                 val s = 1f - 0.1f * p
                                 scaleX = s
@@ -139,6 +148,54 @@ class MainActivity : ComponentActivity() {
                                 Screen.NewChat -> NewChatScreen(vm)
                                 Screen.Blocked -> BlockedScreen(vm)
                                 Screen.Settings -> SettingsScreen(vm, onSetDefault = ::requestRole)
+                            }
+                        }
+                        // Fruit: floating glass tabs with a sliding lens, plus search.
+                        val tabScreens = listOf(Screen.List, Screen.Blocked, Screen.Settings)
+                        if (Bit.clean && target in tabScreens) {
+                            val query by vm.query.collectAsStateWithLifecycle()
+                            var searching by remember { mutableStateOf(false) }
+                            if (target != Screen.List && searching) searching = false
+                            com.bitdroid.messages.ui.GlassTabBar(
+                                haze = haze,
+                                tabs = listOf(
+                                    com.bitdroid.messages.ui.TabItem(androidx.compose.material.icons.Icons.Rounded.ChatBubble, "Chats"),
+                                    com.bitdroid.messages.ui.TabItem(androidx.compose.material.icons.Icons.Rounded.Block, "Blocked"),
+                                    com.bitdroid.messages.ui.TabItem(androidx.compose.material.icons.Icons.Rounded.Settings, "Settings"),
+                                ),
+                                selected = tabScreens.indexOf(target),
+                                onSelect = { i ->
+                                    vm.stack.clear()
+                                    vm.stack.add(Screen.List)
+                                    if (i > 0) {
+                                        if (i == 1) vm.loadBlocked()
+                                        vm.stack.add(tabScreens[i])
+                                    }
+                                },
+                                searching = searching,
+                                onSearch = {
+                                    if (searching) {
+                                        vm.setQuery("")
+                                        searching = false
+                                    } else {
+                                        vm.stack.clear()
+                                        vm.stack.add(Screen.List)
+                                        searching = true
+                                    }
+                                },
+                                modifier = Modifier.align(Alignment.BottomCenter),
+                            ) {
+                                val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+                                androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+                                androidx.compose.foundation.layout.Box {
+                                    if (query.isEmpty()) androidx.compose.material3.Text("Search messages", color = androidx.compose.ui.graphics.Color(0xFFD0D0D8), fontSize = 17.sp)
+                                    androidx.compose.foundation.text.BasicTextField(
+                                        query, vm::setQuery, singleLine = true,
+                                        textStyle = androidx.compose.ui.text.TextStyle(color = androidx.compose.ui.graphics.Color.White, fontSize = 17.sp),
+                                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Bit.Accent),
+                                        modifier = Modifier.fillMaxWidth().focusRequester(focus),
+                                    )
+                                }
                             }
                         }
                     }

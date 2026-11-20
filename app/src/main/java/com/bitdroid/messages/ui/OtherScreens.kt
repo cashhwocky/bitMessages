@@ -195,7 +195,7 @@ fun NewChatScreen(vm: AppViewModel) {
             }
         }
 
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 40.dp)) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = if (Bit.clean) 120.dp else 40.dp)) {
             if (looksLikeAddress(input)) {
                 item {
                     Row(
@@ -304,7 +304,7 @@ fun SettingsScreen(vm: AppViewModel, onSetDefault: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         TopBar("Settings", onBack = { vm.back() })
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 40.dp)) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = if (Bit.clean) 120.dp else 40.dp)) {
             item { SectionLabel("Messages") }
             item {
                 ToggleRow("Delivery reports", "Show when your texts are delivered", delivery) {

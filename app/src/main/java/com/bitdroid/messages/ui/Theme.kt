@@ -136,6 +136,10 @@ fun BitTheme(content: @Composable () -> Unit) {
 val BubbleText = TextStyle(fontFamily = Body, fontSize = 16.sp, lineHeight = 21.sp)
 
 /** Monospace tag text: TIMES, COUNTS, LABELS. */
+/** Small secondary text in the same family as message text (Fruit uses this instead of mono). */
+fun soft(size: Float, color: Color = Bit.TextDim, weight: FontWeight = FontWeight.Medium) =
+    TextStyle(fontFamily = Body, fontSize = size.sp, fontWeight = weight, color = color)
+
 fun mono(size: Float, weight: FontWeight = FontWeight.Bold, color: Color = Bit.TextDim, spacing: Float = 0.8f) =
     TextStyle(fontFamily = Mono, fontSize = size.sp, fontWeight = weight, color = color, letterSpacing = spacing.sp)
 

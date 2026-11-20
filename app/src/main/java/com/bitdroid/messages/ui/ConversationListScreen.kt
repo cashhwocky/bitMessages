@@ -414,7 +414,7 @@ private fun CleanHeader(vm: AppViewModel, unread: Int, onSelect: () -> Unit) {
             Text("Messages", fontFamily = Body, fontWeight = FontWeight.Bold, fontSize = 34.sp, letterSpacing = (-0.6).sp)
             if (unread > 0) {
                 Spacer(Modifier.width(10.dp))
-                Text("$unread NEW", style = mono(12f, color = Bit.Info, spacing = 0.5f), modifier = Modifier.padding(bottom = 7.dp))
+                Text("$unread new", style = soft(15f, Bit.Info, FontWeight.SemiBold), modifier = Modifier.padding(bottom = 6.dp))
             }
         }
     }
@@ -484,7 +484,7 @@ private fun CleanRow(c: Conversation, selectMode: Boolean, selected: Boolean, on
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(shortTime(context, c.date).uppercase(), style = mono(11.5f, FontWeight.Medium, if (c.unread) Bit.Info else Bit.TextDim, 0.3f))
+                    Text(shortTime(context, c.date), style = soft(13.5f, if (c.unread) Bit.Info else Bit.TextDim))
                 }
                 Text(
                     if (c.hasError) "Not sent" else c.snippet,

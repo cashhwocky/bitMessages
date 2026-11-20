@@ -244,8 +244,8 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
                     Column(Modifier.weight(1f)) {
                         Text(title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
-                            listOfNotNull(if (isGroup) "GROUP" else "SMS", if (sims.size > 1 && sim != null) "SIM ${sim.slotIndex + 1}" else null).joinToString(" · "),
-                            style = mono(10.5f, color = Bit.Info, spacing = 0.5f),
+                            listOfNotNull(if (isGroup) "Group" else "Text message", if (sims.size > 1 && sim != null) "SIM ${sim.slotIndex + 1}" else null).joinToString(" · "),
+                            style = soft(12.5f, Bit.Info),
                         )
                     }
                 }
@@ -467,7 +467,7 @@ private fun OutlinedCircle(onClick: () -> Unit, size: Dp = 44.dp, content: @Comp
 private fun DayRule(label: String) {
     if (Bit.clean) {
         Box(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 8.dp), contentAlignment = Alignment.Center) {
-            Text(label.uppercase(), style = mono(10.5f, FontWeight.Medium, Bit.TextDim, 1f))
+            Text(label, style = soft(12.5f, weight = FontWeight.SemiBold))
         }
         return
     }
@@ -646,12 +646,12 @@ private fun CleanRun(
         val status = when {
             failed -> null
             !mine -> shortClock(context, last.date)
-            last.status == MessageStatus.SENDING -> "SENDING"
-            last.status == MessageStatus.DELIVERED -> "DELIVERED " + shortClock(context, last.date)
-            else -> "SENT " + shortClock(context, last.date)
+            last.status == MessageStatus.SENDING -> "Sending…"
+            last.status == MessageStatus.DELIVERED -> "Delivered · " + shortClock(context, last.date)
+            else -> "Sent · " + shortClock(context, last.date)
         }
         if (status != null) {
-            Text(status.uppercase(), style = mono(10.5f, FontWeight.Medium, Bit.TextDim, 0.5f), modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+            Text(status, style = soft(12f), modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
         }
         if (failed) {
             Row(
@@ -661,7 +661,7 @@ private fun CleanRun(
             ) {
                 Icon(Icons.Rounded.Refresh, null, tint = Bit.Error, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("NOT SENT · TAP TO RETRY", style = mono(10.5f, color = Bit.Error, spacing = 0.5f))
+                Text("Not sent · Tap to retry", style = soft(12f, Bit.Error, FontWeight.SemiBold))
             }
         }
     }

@@ -53,9 +53,9 @@ object Bit {
 
     /** Clean theme: black, gradient bubbles, mono details. */
     val clean: Boolean get() = palette.clean
-    val Gradient: Brush get() = Brush.linearGradient(listOf(Color(0xFF4F7CFF), Color(0xFF7B5CF5)))
-    val GradEnd = Color(0xFF7B5CF5)
-    val Info = Color(0xFF9CB2FF)
+    val Gradient: Brush get() = Brush.linearGradient(listOf(Color(0xFFE2DAFB), Color(0xFFC3B8EC)))
+    val GradEnd = Color(0xFFC3B8EC)
+    val Info = Color(0xFFCBC2EB)
     val ErrorContainer = Color(0xFF93000A)
 
     // Kept so older call sites read naturally.
@@ -188,10 +188,11 @@ object Themes {
 
     /** Fruit (stored as "clean"): true black with blue-violet gradient bubbles. */
     val CLEAN = Palette(
-        bg = Color(0xFF000000), accent = Color(0xFF6C74FA), onAccent = Color(0xFFFFFFFF),
-        surface = Color(0xFF17171A), surfaceHigh = Color(0xFF232327), raised = Color(0xFF2C2C31),
-        outline = Color(0xFF3A3A40), outlineSoft = Color(0xFF2E2E33), hairline = Color(0xFF222226),
-        textDim = Color(0xFF8E8E96), tile = Color(0xFF232327), clean = true,
+        bg = Color(0xFF110E1A), accent = Color(0xFFCBC2EB), onAccent = Color(0xFF241C4A),
+        surface = Color(0xFF2E2842), surfaceHigh = Color(0xFF3A3352), raised = Color(0xFF463F5E),
+        outline = Color(0xFF6A6188), outlineSoft = Color(0xFF574F72), hairline = Color(0xFF2A2540),
+        textDim = Color(0xFFB9B0D6), tile = Color(0xFF3A3352), pink = Color(0xFF5E3A5A), pinkText = Color(0xFFF6D3EA),
+        light = Color(0xFFECE2FF), clean = true,
     )
 
     /** Matches the bitDroid home screen: lavender on purple-gray tiles over a purple-to-teal glow. */

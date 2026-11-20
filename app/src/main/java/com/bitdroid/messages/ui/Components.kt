@@ -104,8 +104,8 @@ fun Avatar(contacts: List<Contact>, size: Dp, modifier: Modifier = Modifier, sha
     val photo = rememberImage(single?.photoUri, 256)
     val seed = (single?.address ?: contacts.joinToString { it.address }).hashCode()
     val pastel = pastelColors[Math.floorMod(seed, pastelColors.size)]
-    val bg = if (Bit.expressive) pastel.first else avatarColors[Math.floorMod(seed, avatarColors.size)]
-    val fg = if (Bit.expressive) pastel.second else Color.White
+    val bg = if (Bit.expressive || Bit.clean) pastel.first else avatarColors[Math.floorMod(seed, avatarColors.size)]
+    val fg = if (Bit.expressive || Bit.clean) pastel.second else Color.White
     Box(
         modifier
             .size(size)
@@ -119,7 +119,7 @@ fun Avatar(contacts: List<Contact>, size: Dp, modifier: Modifier = Modifier, sha
             single?.name != null -> Text(
                 single.name.trim().firstOrNull()?.uppercase() ?: "#",
                 color = fg,
-                fontFamily = if (Bit.expressive) Body else Display,
+                fontFamily = if (Bit.expressive || Bit.clean) Body else Display,
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = (size.value * 0.38f).sp,
             )

@@ -198,7 +198,7 @@ fun ConversationListScreen(vm: AppViewModel) {
                         val surface = when {
                             pink -> Modifier.padding(start = 14.dp, end = 14.dp, bottom = 10.dp).clip(CircleShape).background(Bit.Pink)
                             expressive -> homePanel(index == firstRead, index == rest.lastIndex)
-                            Bit.clean -> Modifier
+                            Bit.clean -> homePanel(index == 0, index == rest.lastIndex)
                             else -> rowSurface(listStyle, index == 0, index == rest.lastIndex)
                         }
                         SwipeRow(
@@ -411,7 +411,13 @@ private fun CleanHeader(vm: AppViewModel, unread: Int, onSelect: () -> Unit) {
             ) { Icon(Icons.Rounded.Edit, "Start chat", tint = Color.White, modifier = Modifier.size(19.dp)) }
         }
         Row(Modifier.padding(start = 20.dp, top = 14.dp, end = 20.dp), verticalAlignment = Alignment.Bottom) {
-            Text("Messages", fontFamily = Body, fontWeight = FontWeight.Bold, fontSize = 34.sp, letterSpacing = (-0.6).sp)
+            Text(
+                buildAnnotatedString {
+                    pushStyle(SpanStyle(fontWeight = FontWeight.Light)); append("Mess"); pop()
+                    pushStyle(SpanStyle(fontWeight = FontWeight.ExtraBold)); append("ages"); pop()
+                },
+                fontFamily = Body, fontSize = 38.sp, letterSpacing = (-1.2).sp,
+            )
             if (unread > 0) {
                 Spacer(Modifier.width(10.dp))
                 Text("$unread new", style = soft(15f, Bit.Info, FontWeight.SemiBold), modifier = Modifier.padding(bottom = 6.dp))
@@ -432,13 +438,9 @@ private fun CleanPin(c: Conversation, selectMode: Boolean, selected: Boolean, on
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            if (c.unread) {
-                Box(Modifier.size(90.dp).clip(CircleShape).background(Bit.Gradient).padding(3.dp).clip(CircleShape).background(Color.Black).padding(3.dp)) {
-                    Avatar(c.recipients, 78.dp)
-                }
-            } else {
-                Avatar(c.recipients, 82.dp, Modifier.padding(4.dp))
-            }
+            val shape = pinShapes[Math.floorMod(c.threadId.toInt(), pinShapes.size)]
+            Avatar(c.recipients, 88.dp, shape = shape)
+            if (c.unread) Box(Modifier.align(Alignment.TopEnd).size(22.dp).clip(Shapes.Sunny).background(Color(0xFFF28FB5)))
             if (c.unread && c.snippet.isNotBlank()) {
                 Box(Modifier.align(Alignment.TopCenter).offset(y = (-36).dp)) {
                     Text(
@@ -470,10 +472,10 @@ private fun CleanRow(c: Conversation, selectMode: Boolean, selected: Boolean, on
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(14.dp), contentAlignment = Alignment.Center) {
-            if (c.unread) Box(Modifier.size(9.dp).clip(CircleShape).background(Bit.Gradient))
+            if (c.unread) Box(Modifier.size(10.dp).clip(Shapes.Sunny).background(Color(0xFFF28FB5)))
         }
         Box(Modifier.padding(start = 2.dp, end = 12.dp)) {
-            Avatar(c.recipients, 48.dp)
+            Avatar(c.recipients, 50.dp, shape = if (c.unread) Shapes.Ripple7 else Shapes.Circle)
             if (selectMode) SelectDot(selected, Modifier.align(Alignment.BottomEnd))
         }
         Column(Modifier.weight(1f).fillMaxHeight()) {
@@ -492,7 +494,6 @@ private fun CleanRow(c: Conversation, selectMode: Boolean, selected: Boolean, on
                     fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            Box(Modifier.fillMaxWidth().height(0.5.dp).background(Bit.Hairline))
         }
     }
 }

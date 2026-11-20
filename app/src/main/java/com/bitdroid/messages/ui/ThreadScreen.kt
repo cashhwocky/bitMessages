@@ -239,10 +239,10 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
                         .padding(start = 5.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Avatar(state.recipients, 42.dp)
+                    Avatar(state.recipients, 44.dp, shape = Shapes.Ripple)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(title, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
                             listOfNotNull(if (isGroup) "Group" else "Text message", if (sims.size > 1 && sim != null) "SIM ${sim.slotIndex + 1}" else null).joinToString(" · "),
                             style = soft(12.5f, Bit.Info),
@@ -253,9 +253,12 @@ fun ThreadScreen(vm: AppViewModel, threadId: Long) {
             }
             if (!isGroup && state.recipients.size == 1 && !Phone.isEmail(state.recipients[0].address)) {
                 Spacer(Modifier.width(10.dp))
-                GlassCircle(44.dp, onClick = {
-                    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", state.recipients[0].address, null)))
-                }) { Icon(Icons.Rounded.Call, "Call", tint = Color.White, modifier = Modifier.size(19.dp)) }
+                Box(
+                    Modifier.size(52.dp).squish {
+                        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", state.recipients[0].address, null)))
+                    }.clip(Shapes.Clover).background(Bit.Light),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Rounded.Call, "Call", tint = Bit.OnAccent, modifier = Modifier.size(20.dp)) }
             }
         } else if (Bit.expressive) Row(
             Modifier.fillMaxWidth().statusBarsPadding().padding(start = 10.dp, end = 12.dp, top = 8.dp, bottom = 6.dp),
@@ -628,16 +631,16 @@ private fun CleanRun(
                     Modifier.widthIn(max = 280.dp)
                         .then(if (bad) Modifier.dashedBorder(2.dp, Bit.Error, 20.dp) else Modifier)
                         .clip(shape)
-                        .then(if (bad) Modifier else if (mine) Modifier.background(Bit.Gradient) else Modifier.background(Bit.SurfaceHigh))
+                        .then(if (bad) Modifier else if (mine) Modifier.background(if (last) Bit.Light else Bit.Accent) else Modifier.background(Bit.Raised))
                         .width(IntrinsicSize.Max),
                 ) {
-                    Segment(m, Color.White, first = true, onImage, onRetry, onDownload, onCopy, onDelete, sel)
+                    Segment(m, if (mine && !bad) Bit.OnAccent else Color.White, first = true, onImage, onRetry, onDownload, onCopy, onDelete, sel)
                 }
                 if (last && !bad) {
                     Box(
                         Modifier.align(if (mine) Alignment.BottomEnd else Alignment.BottomStart)
                             .offset(x = if (mine) 9.dp else (-9).dp, y = 3.dp)
-                            .size(7.dp).clip(CircleShape).background(if (mine) Bit.GradEnd else Bit.SurfaceHigh),
+                            .size(8.dp).clip(Shapes.Sunny).background(if (mine) Bit.Light else Bit.Raised),
                     )
                 }
             }
@@ -932,10 +935,10 @@ private fun Composer(
                 if (counter != null) Text(counter, style = mono(10.5f, FontWeight.Medium), modifier = Modifier.padding(horizontal = 4.dp))
                 if (cl) {
                     Box(
-                        Modifier.padding(start = 4.dp).size(38.dp).scale(sendScale).squish(enabled = canSend, onClick = onSend).clip(CircleShape)
-                            .then(if (canSend) Modifier.background(Bit.Gradient).glassShine(0.4f) else Modifier.background(Color.White.copy(alpha = 0.1f))),
+                        Modifier.padding(start = 4.dp).size(44.dp).scale(sendScale).squish(enabled = canSend, onClick = onSend).clip(Shapes.Clover)
+                            .then(if (canSend) Modifier.background(Bit.Accent) else Modifier.background(Color.White.copy(alpha = 0.1f))),
                         contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Rounded.ArrowUpward, "Send", tint = if (canSend) Color.White else Bit.TextDim, modifier = Modifier.size(20.dp)) }
+                    ) { Icon(Icons.Rounded.ArrowUpward, "Send", tint = if (canSend) Bit.OnAccent else Bit.TextDim, modifier = Modifier.size(20.dp)) }
                 }
                 if (sims.size > 1 && sim != null) {
                     Box {

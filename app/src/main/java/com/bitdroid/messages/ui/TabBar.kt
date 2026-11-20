@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,6 +78,9 @@ fun GlassTabBar(
     searchContent: @Composable () -> Unit = {},
 ) {
     val view = LocalView.current
+    // The drag handler lives across recompositions, so read the latest values through these.
+    val currentSelected by rememberUpdatedState(selected)
+    val currentOnSelect by rememberUpdatedState(onSelect)
     Row(
         modifier.fillMaxWidth().imePadding().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -115,14 +119,14 @@ fun GlassTabBar(
                                     val target = (x.value / tabW).roundToInt().coerceIn(0, tabs.lastIndex)
                                     dragging = false
                                     scope.launch { x.animateTo(target * tabW, spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)) }
-                                    if (target != selected) {
+                                    if (target != currentSelected) {
                                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                        onSelect(target)
+                                        currentOnSelect(target)
                                     }
                                 },
                                 onDragCancel = {
                                     dragging = false
-                                    scope.launch { x.animateTo(selected * tabW) }
+                                    scope.launch { x.animateTo(currentSelected * tabW) }
                                 },
                             ) { change, dx ->
                                 change.consume()

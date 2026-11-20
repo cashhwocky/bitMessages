@@ -1,15 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- See-through glass symbol with a bright edge. -->
+<!-- Duo shapes: symbol built from two overlapping colored shapes. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <group android:scaleX="0.46" android:scaleY="0.46" android:pivotX="54" android:pivotY="54">
-            <path android:pathData="M30,30h48a14,14 0,0 1,14 14v18a14,14 0,0 1,-14 14H46l-12,9v-9h-4a14,14 0,0 1,-14 -14V44a14,14 0,0 1,14 -14z" android:strokeColor="#E6FFFFFF" android:strokeWidth="2.4" android:strokeLineJoin="round">
-                <aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="0" android:startY="30" android:endX="0" android:endY="85" android:startColor="#8CFFFFFF" android:endColor="#2EFFFFFF" /></aapt:attr>
-            </path>
-            <path android:pathData="M26,90m-4.2,0a4.2,4.2 0,1 1,8.4 0a4.2,4.2 0,1 1,-8.4 0" android:strokeColor="#E6FFFFFF" android:strokeWidth="2.4" android:strokeLineJoin="round">
-                <aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="0" android:startY="86" android:endX="0" android:endY="94" android:startColor="#8CFFFFFF" android:endColor="#2EFFFFFF" /></aapt:attr>
-            </path>
+    <group android:scaleX="0.667" android:scaleY="0.667" android:pivotX="54" android:pivotY="54">
+        <path android:fillColor="#A78BFA" android:pathData="M44,38h40a12,12 0,0 1,12 12v16a12,12 0,0 1,-12 12h-2v8c0,1.8 -2.1,2.8 -3.5,1.6L68,78H44a12,12 0,0 1,-12 -12V50a12,12 0,0 1,12 -12z" />
+        <path android:fillColor="#60A5FA" android:fillAlpha="0.92" android:pathData="M24,22h40a12,12 0,0 1,12 12v16a12,12 0,0 1,-12 12H40l-10,8.6c-1.4,1.2 -3.5,0.2 -3.5,-1.6V62H24a12,12 0,0 1,-12 -12V34a12,12 0,0 1,12 -12z" />
     </group>
 </vector>

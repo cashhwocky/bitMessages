@@ -8,7 +8,7 @@ object AppIcons {
     data class Choice(val key: String, val label: String, val alias: String, val bg: Long, val fgDark: Boolean, val art: Int? = null)
 
     val all = listOf(
-        Choice("glass", "DUO", ".IconGlass", 0xFF312E81, false, com.bitdroid.messages.R.drawable.ic_launcher_foreground_glass),
+        Choice("glass", "BOLD", ".IconGlass", 0xFF6A6BF8, false, com.bitdroid.messages.R.drawable.ic_launcher_foreground_glass),
         Choice("you", "BUBBLES", ".IconYou", 0xFFDCD4F6, true, com.bitdroid.messages.R.drawable.ic_launcher_foreground_you),
         Choice("white", "WHITE", ".IconWhite", 0xFFFFFFFF, true),
         Choice("black", "AMOLED", ".IconBlack", 0xFF000000, false),

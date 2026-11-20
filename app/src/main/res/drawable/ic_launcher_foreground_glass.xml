@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Duo shapes: symbol built from two overlapping colored shapes. -->
+<!-- Big white symbol. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
     <group android:scaleX="0.667" android:scaleY="0.667" android:pivotX="54" android:pivotY="54">
-        <path android:fillColor="#A78BFA" android:pathData="M44,38h40a12,12 0,0 1,12 12v16a12,12 0,0 1,-12 12h-2v8c0,1.8 -2.1,2.8 -3.5,1.6L68,78H44a12,12 0,0 1,-12 -12V50a12,12 0,0 1,12 -12z" />
-        <path android:fillColor="#60A5FA" android:fillAlpha="0.92" android:pathData="M24,22h40a12,12 0,0 1,12 12v16a12,12 0,0 1,-12 12H40l-10,8.6c-1.4,1.2 -3.5,0.2 -3.5,-1.6V62H24a12,12 0,0 1,-12 -12V34a12,12 0,0 1,12 -12z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M28,26h52a14,14 0,0 1,14 14v22a14,14 0,0 1,-14 14H50l-16,13c-1.6,1.3 -4,0.2 -4,-1.9V76h-2a14,14 0,0 1,-14 -14V40a14,14 0,0 1,14 -14z" />
+        <path android:fillColor="#6A6BF8" android:pathData="M40,51m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+        <path android:fillColor="#6A6BF8" android:pathData="M54,51m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+        <path android:fillColor="#6A6BF8" android:pathData="M68,51m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
     </group>
 </vector>

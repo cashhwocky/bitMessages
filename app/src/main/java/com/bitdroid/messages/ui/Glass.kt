@@ -34,15 +34,16 @@ import dev.chrisbanes.haze.hazeEffect
 /** Quiet frosted surface for [shape] (no blur). */
 fun Modifier.glass(shape: Shape, tint: Color = Color.White, strength: Float = 1f): Modifier =
     this.clip(shape)
-        .background(tint.copy(alpha = 0.075f * strength))
-        .border(0.75.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.04f))), shape)
+        // bitHome tonal tile: deep purple-gray, a hint of lavender at the edge.
+        .background(Color(0xFF2A2440).copy(alpha = 0.9f * strength))
+        .border(0.75.dp, Color(0xFFCBC2EB).copy(alpha = 0.16f), shape)
 
 /** Real glass: blurs whatever [state]'s source draws behind it, with a dark tint so text stays readable. */
 fun Modifier.frosted(state: HazeState, shape: Shape): Modifier =
     this.clip(shape)
         .hazeEffect(state) {
             blurRadius = 28.dp
-            tints = listOf(HazeTint(Color(0xFF101014).copy(alpha = 0.55f)))
+            tints = listOf(HazeTint(Color(0xFF2E2842).copy(alpha = 0.8f)))
             noiseFactor = 0.03f
         }
         .border(0.75.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.24f), Color.White.copy(alpha = 0.05f))), shape)

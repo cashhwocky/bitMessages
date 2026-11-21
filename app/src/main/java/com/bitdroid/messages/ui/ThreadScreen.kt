@@ -468,13 +468,7 @@ private fun OutlinedCircle(onClick: () -> Unit, size: Dp = 44.dp, content: @Comp
 
 @Composable
 private fun DayRule(label: String) {
-    if (Bit.clean) {
-        Box(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 8.dp), contentAlignment = Alignment.Center) {
-            Text(label, style = soft(12.5f, weight = FontWeight.SemiBold))
-        }
-        return
-    }
-    if (Bit.expressive) {
+    if (Bit.expressive || Bit.clean) {
         Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
             Row(
                 Modifier.clip(CircleShape).background(Bit.Pink).padding(start = 6.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
@@ -897,7 +891,7 @@ private fun Composer(
             Box(
                 Modifier.padding(bottom = if (cl) 4.dp else 3.dp).size(if (cl) 44.dp else 52.dp)
                     .then(
-                        if (cl) Modifier.squish(onClick = onAttach).glass(CircleShape)
+                        if (cl) Modifier.squish(onClick = onAttach).clip(Shapes.Gem).background(Bit.SurfaceHigh)
                         else if (ex) Modifier.clip(Shapes.Gem).background(Bit.Tile) else Modifier.clip(CircleShape).border(2.dp, Bit.OutlineSoft, CircleShape),
                     )
                     .then(if (cl) Modifier else Modifier.clickable(onClick = onAttach)),

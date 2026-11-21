@@ -66,6 +66,23 @@ class RoundedPolygonShape(private val sides: Int, private val round: Float = 0.3
     }
 }
 
+/** A heart, drawn in a 100×100 box. */
+object HeartShape : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val k = min(size.width, size.height) / 100f
+        fun x(v: Float) = v * k
+        val p = Path().apply {
+            moveTo(x(50f), x(90f))
+            cubicTo(x(12f), x(64f), x(4f), x(40f), x(18f), x(24f))
+            cubicTo(x(30f), x(10f), x(46f), x(16f), x(50f), x(28f))
+            cubicTo(x(54f), x(16f), x(70f), x(10f), x(82f), x(24f))
+            cubicTo(x(96f), x(40f), x(88f), x(64f), x(50f), x(90f))
+            close()
+        }
+        return Outline.Generic(p)
+    }
+}
+
 private fun superellipse(t: Double, p: Double) = (abs(cos(t)).pow(p) + abs(sin(t)).pow(p)).pow(-1.0 / p)
 
 /** The bitHome shape set: ripples, clovers, bursts and friends, like the Pixel home screen. */
@@ -79,6 +96,7 @@ object Shapes {
     val Gem: Shape = PolarShape { t -> 0.98 * superellipse(t, 1.35) }
     val Triangle: Shape = RoundedPolygonShape(3, 0.32f)
     val Pentagon: Shape = RoundedPolygonShape(5, 0.28f)
+    val Heart: Shape = HeartShape
 }
 
 /** Screen background: solid black, or the bitHome purple-to-teal wallpaper glow. */

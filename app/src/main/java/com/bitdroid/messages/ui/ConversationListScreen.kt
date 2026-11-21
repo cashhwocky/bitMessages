@@ -119,7 +119,7 @@ fun ConversationListScreen(vm: AppViewModel) {
     // bitHome: unread chats float to the top as their own pink pills.
     val rest = remember(pinOrder, conversations, expressive) {
         val r = conversations.filter { it.threadId !in pinOrder }
-        if (expressive) r.filter { it.unread } + r.filterNot { it.unread } else r
+        if (expressive || Bit.clean) r.filter { it.unread } + r.filterNot { it.unread } else r
     }
     val firstRead = rest.indexOfFirst { !it.unread }
     val unreadTotal = conversations.count { it.unread }
@@ -163,7 +163,7 @@ fun ConversationListScreen(vm: AppViewModel) {
                         ),
                     )
                 } else {
-                    if (Bit.clean) CleanHeader(vm, unreadTotal, onSelect = { sel.start() })
+                    if (Bit.clean) CleanHeader(vm, unreadTotal, conversations.count { it.unread }, pinned.size, onSelect = { sel.start() })
                     else if (Bit.expressive) HomeHeader(vm, unreadTotal, conversations.size, onSelect = { sel.start() })
                     else Header(vm, unreadTotal, conversations.size, onSelect = { sel.start() })
                 }
@@ -174,11 +174,16 @@ fun ConversationListScreen(vm: AppViewModel) {
             } else {
                 if (pinned.isNotEmpty()) {
                     item(key = "pins") {
-                        PinGrid(
-                            pinned, sel,
-                            onOpen = { if (sel.active) { view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK); sel.toggle(it.threadId) } else vm.openThread(it.threadId) },
-                            onLong = { if (sel.active) sel.toggle(it.threadId) else openMenu(it) },
-                        )
+                        Box(
+                            if (Bit.clean) Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp).clip(RoundedCornerShape(32.dp)).background(Bit.Surface.copy(alpha = 0.85f)).padding(bottom = 4.dp)
+                            else Modifier,
+                        ) {
+                            PinGrid(
+                                pinned, sel,
+                                onOpen = { if (sel.active) { view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK); sel.toggle(it.threadId) } else vm.openThread(it.threadId) },
+                                onLong = { if (sel.active) sel.toggle(it.threadId) else openMenu(it) },
+                            )
+                        }
                     }
                 }
                 if (loaded && conversations.isEmpty()) {
@@ -194,11 +199,11 @@ fun ConversationListScreen(vm: AppViewModel) {
                     else if (!expressive) item(key = "label") { SectionRule(if (pinned.isEmpty()) "CHATS" else "ALL CHATS") }
                     else item(key = "gap") { Spacer(Modifier.height(14.dp)) }
                     itemsIndexed(rest, key = { _, it -> it.threadId }) { index, c ->
-                        val pink = expressive && c.unread
+                        val pink = (expressive || Bit.clean) && c.unread
                         val surface = when {
                             pink -> Modifier.padding(start = 14.dp, end = 14.dp, bottom = 10.dp).clip(CircleShape).background(Bit.Pink)
                             expressive -> homePanel(index == firstRead, index == rest.lastIndex)
-                            Bit.clean -> homePanel(index == 0, index == rest.lastIndex)
+                            Bit.clean -> homePanel(index == firstRead, index == rest.lastIndex)
                             else -> rowSurface(listStyle, index == 0, index == rest.lastIndex)
                         }
                         SwipeRow(
@@ -391,36 +396,52 @@ fun ConversationListScreen(vm: AppViewModel) {
 
 /** Clean header: Edit pill, menu and compose up top, then a big "Messages" title with a mono count. */
 @Composable
-private fun CleanHeader(vm: AppViewModel, unread: Int, onSelect: () -> Unit) {
+private fun CleanHeader(vm: AppViewModel, unread: Int, unreadChats: Int, pinnedCount: Int, onSelect: () -> Unit) {
     val view = LocalView.current
-    Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.height(40.dp).squish(onClick = onSelect).glass(CircleShape).padding(horizontal = 16.dp),
-                contentAlignment = Alignment.Center,
-            ) { Text("Edit", fontSize = 15.5.sp, fontWeight = FontWeight.Medium) }
-            Spacer(Modifier.weight(1f))
-            Box(Modifier.glass(CircleShape)) { HeaderMenu(vm, onSelect, Color.Transparent) }
-            Spacer(Modifier.width(10.dp))
-            Box(
-                Modifier.size(44.dp).squish {
-                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    vm.push(Screen.NewChat)
-                }.clip(CircleShape).background(Bit.Gradient).glassShine(0.4f),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Rounded.Edit, "Start chat", tint = Color.White, modifier = Modifier.size(19.dp)) }
-        }
-        Row(Modifier.padding(start = 20.dp, top = 14.dp, end = 20.dp), verticalAlignment = Alignment.Bottom) {
+    Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 18.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.Bottom) {
             Text(
                 buildAnnotatedString {
                     pushStyle(SpanStyle(fontWeight = FontWeight.Light)); append("Mess"); pop()
                     pushStyle(SpanStyle(fontWeight = FontWeight.ExtraBold)); append("ages"); pop()
                 },
-                fontFamily = Body, fontSize = 38.sp, letterSpacing = (-1.2).sp,
+                fontFamily = Body, fontSize = 40.sp, letterSpacing = (-1.4).sp, modifier = Modifier.weight(1f),
             )
-            if (unread > 0) {
+            Box(Modifier.clip(CircleShape).background(Bit.SurfaceHigh)) { HeaderMenu(vm, onSelect, Color.Transparent) }
+            Spacer(Modifier.width(8.dp))
+            Box(
+                Modifier.size(44.dp).squish {
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    vm.push(Screen.NewChat)
+                }.clip(Shapes.Squircle).background(Bit.Accent),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Rounded.Edit, "Start chat", tint = Bit.OnAccent, modifier = Modifier.size(20.dp)) }
+        }
+        // Little widgets: unread and pinned, like the bitHome home screen.
+        Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 14.dp).height(64.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(28.dp)).background(Bit.Accent).padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(42.dp).clip(Shapes.Sunny).background(Bit.OnAccent), contentAlignment = Alignment.Center) {
+                    Text(if (unread > 99) "99+" else "$unread", color = Bit.Accent, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                }
                 Spacer(Modifier.width(10.dp))
-                Text("$unread new", style = soft(15f, Bit.Info, FontWeight.SemiBold), modifier = Modifier.padding(bottom = 6.dp))
+                Column {
+                    Text("Unread", color = Bit.OnAccent, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                    Text(if (unreadChats == 1) "1 chat" else "$unreadChats chats", color = Bit.OnAccent.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                }
+            }
+            Row(
+                Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 12.dp)).background(Bit.Pink).padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(30.dp).clip(Shapes.Heart).background(Bit.PinkText))
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text("$pinnedCount pinned", color = Bit.PinkText, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                    Text("hold to edit", color = Bit.PinkText.copy(alpha = 0.75f), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                }
             }
         }
     }
@@ -624,8 +645,8 @@ fun SectionRule(label: String) {
 @Composable
 private fun PinGrid(pins: List<Conversation>, sel: Selection<Long>, onOpen: (Conversation) -> Unit, onLong: (Conversation) -> Unit) {
     Column(
-        Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = if (Bit.clean) 44.dp else if (Bit.expressive) 20.dp else 30.dp, bottom = if (Bit.clean) 16.dp else 0.dp),
-        verticalArrangement = Arrangement.spacedBy(if (Bit.clean) 44.dp else if (Bit.expressive) 16.dp else 28.dp),
+        Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = if (Bit.clean) 18.dp else if (Bit.expressive) 20.dp else 30.dp, bottom = if (Bit.clean) 12.dp else 0.dp),
+        verticalArrangement = Arrangement.spacedBy(if (Bit.clean) 14.dp else if (Bit.expressive) 16.dp else 28.dp),
     ) {
         pins.chunked(3).forEachIndexed { r, row ->
             Row(Modifier.fillMaxWidth()) {

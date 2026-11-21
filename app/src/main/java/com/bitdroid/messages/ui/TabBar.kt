@@ -123,6 +123,8 @@ fun GlassTabBar(
     searching: Boolean,
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
+    action: TabItem? = null,
+    onAction: (() -> Unit)? = null,
     searchContent: @Composable () -> Unit = {},
 ) {
     val view = LocalView.current
@@ -212,8 +214,14 @@ fun GlassTabBar(
         }
         Spacer(Modifier.width(10.dp))
         Box(
-            Modifier.size(68.dp).squish(onClick = onSearch).clip(Shapes.Clover).background(Lav),
+            Modifier.size(68.dp).squish(onClick = { if (searching || onAction == null) onSearch() else onAction() }).clip(Shapes.Clover).background(Lav),
             contentAlignment = Alignment.Center,
-        ) { Icon(if (searching) Icons.Rounded.Close else Icons.Rounded.Search, if (searching) "Close search" else "Search", tint = OnLav, modifier = Modifier.size(26.dp)) }
+        ) {
+            Icon(
+                if (searching) Icons.Rounded.Close else action?.icon ?: Icons.Rounded.Search,
+                if (searching) "Close search" else action?.label ?: "Search",
+                tint = OnLav, modifier = Modifier.size(26.dp),
+            )
+        }
     }
 }

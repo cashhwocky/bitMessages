@@ -1,5 +1,7 @@
 package com.bitdroid.messages.ui
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import android.app.Application
 import android.app.role.RoleManager
 import android.database.ContentObserver
@@ -56,6 +58,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val ctx get() = getApplication<Application>()
 
     val stack = mutableStateListOf<Screen>(Screen.List)
+
+    /** Fruit: message search is open in the floating tab bar. */
+    var searchOpen by androidx.compose.runtime.mutableStateOf(false)
     val current: Screen get() = stack.last()
 
     private val _isDefault = MutableStateFlow(checkDefault())

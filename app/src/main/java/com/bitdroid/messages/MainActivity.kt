@@ -1,5 +1,6 @@
 package com.bitdroid.messages
 
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.unit.sp
@@ -154,8 +155,7 @@ class MainActivity : ComponentActivity() {
                         val tabScreens = listOf(Screen.List, Screen.Blocked, Screen.Settings)
                         if (Bit.clean && target in tabScreens) {
                             val query by vm.query.collectAsStateWithLifecycle()
-                            var searching by remember { mutableStateOf(false) }
-                            if (target != Screen.List && searching) searching = false
+                            if (target != Screen.List && vm.searchOpen) vm.searchOpen = false
                             com.bitdroid.messages.ui.GlassTabBar(
                                 haze = haze,
                                 tabs = listOf(
@@ -172,18 +172,14 @@ class MainActivity : ComponentActivity() {
                                         vm.stack.add(tabScreens[i])
                                     }
                                 },
-                                searching = searching,
+                                searching = vm.searchOpen,
                                 onSearch = {
-                                    if (searching) {
-                                        vm.setQuery("")
-                                        searching = false
-                                    } else {
-                                        vm.stack.clear()
-                                        vm.stack.add(Screen.List)
-                                        searching = true
-                                    }
+                                    vm.setQuery("")
+                                    vm.searchOpen = false
                                 },
                                 modifier = Modifier.align(Alignment.BottomCenter),
+                                action = com.bitdroid.messages.ui.TabItem(androidx.compose.material.icons.Icons.Rounded.Edit, "New message"),
+                                onAction = { vm.push(Screen.NewChat) },
                             ) {
                                 val focus = remember { androidx.compose.ui.focus.FocusRequester() }
                                 androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }

@@ -18,7 +18,7 @@ android {
         applicationId = "com.bitdroid.messages"
         minSdk = 31
         targetSdk = 35
-        versionCode = 28
+        versionCode = 29
         versionName = "0.6.0"
     }
 

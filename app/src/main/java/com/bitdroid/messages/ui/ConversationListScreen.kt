@@ -175,7 +175,7 @@ fun ConversationListScreen(vm: AppViewModel) {
                 if (pinned.isNotEmpty()) {
                     item(key = "pins") {
                         Box(
-                            if (Bit.clean) Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp).clip(RoundedCornerShape(32.dp)).background(Bit.Surface.copy(alpha = 0.85f)).padding(bottom = 4.dp)
+                            if (Bit.clean) Modifier.padding(start = 14.dp, end = 14.dp, top = 16.dp).clip(RoundedCornerShape(32.dp)).background(Bit.Surface.copy(alpha = 0.85f)).padding(bottom = 4.dp)
                             else Modifier,
                         ) {
                             PinGrid(
@@ -195,7 +195,7 @@ fun ConversationListScreen(vm: AppViewModel) {
                         }
                     }
                 } else if (rest.isNotEmpty()) {
-                    if (Bit.clean) item(key = "rule") { Box(Modifier.padding(horizontal = 18.dp).fillMaxWidth().height(0.5.dp).background(Bit.Hairline)) }
+                    if (Bit.clean) item(key = "rule") { Spacer(Modifier.height(16.dp)) }
                     else if (!expressive) item(key = "label") { SectionRule(if (pinned.isEmpty()) "CHATS" else "ALL CHATS") }
                     else item(key = "gap") { Spacer(Modifier.height(14.dp)) }
                     itemsIndexed(rest, key = { _, it -> it.threadId }) { index, c ->
@@ -408,17 +408,17 @@ private fun CleanHeader(vm: AppViewModel, unread: Int, unreadChats: Int, pinnedC
                 fontFamily = Body, fontSize = 40.sp, letterSpacing = (-1.4).sp, modifier = Modifier.weight(1f),
             )
             Box(Modifier.clip(CircleShape).background(Bit.SurfaceHigh)) { HeaderMenu(vm, onSelect, Color.Transparent) }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(12.dp))
             Box(
-                Modifier.size(44.dp).squish {
+                Modifier.size(46.dp).squish {
                     view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    vm.push(Screen.NewChat)
+                    vm.searchOpen = true
                 }.clip(Shapes.Squircle).background(Bit.Accent),
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Rounded.Edit, "Start chat", tint = Bit.OnAccent, modifier = Modifier.size(20.dp)) }
+            ) { Icon(Icons.Rounded.Search, "Search", tint = Bit.OnAccent, modifier = Modifier.size(21.dp)) }
         }
         // Little widgets: unread and pinned, like the bitHome home screen.
-        Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 14.dp).height(64.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 18.dp).height(66.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(
                 Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(28.dp)).background(Bit.Accent).padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
